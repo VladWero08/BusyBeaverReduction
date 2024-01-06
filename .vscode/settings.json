@@ -1,0 +1,6 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./busy_beaver_reduction/Cargo.toml"
+    ],
+    "rust-analyzer.showUnlinkedFileNotification": false
+}
