@@ -1,16 +1,11 @@
 use crate::delta::transition_function::TransitionFunction;
+use crate::turing_machine::direction::Direction;
+use crate::turing_machine::special_states::SpecialStates;
 
 // the alphabets will only contain 0s and 1s,
 // and the tape size will be considered to be infinite
 // const INPUT_ALPHABET: [u8; 2] = [0, 1];
 // const TAPE_ALPHABET: [u8; 2] = [0, 1];
-
-const STATE_START: u8 = 0;
-const STATE_ACCEPT: u8 = 101;
-const STATE_REJECT: u8 = 102;
-
-const LEFT: u8 = 0;
-const RIGHT: u8 = 1;
 
 pub struct TuringMachine {
     pub tape: Vec<u8>,
@@ -26,25 +21,26 @@ impl TuringMachine {
         TuringMachine {
             tape: vec![0],
             head_position: 0,
-            current_state: STATE_START,
+            current_state: SpecialStates::STATE_START.value(),
             steps: 0,
             transition_function: TransitionFunction::new(),
-            halted: false
+            halted: false,
         }
     }
 
     /// Tries to make a transition of the Turing Machine
     /// using the `current_state` and the symbol found on
     /// the `tape` at the `head_position` position.
-    /// 
+    ///
     /// If the transition exists in the `transition_function`,
     /// it will be made.
-    /// 
+    ///
     /// Return whether the transition describes is possible.
-    pub fn make_transition(&mut self) -> bool{
-        let possible_transition = self.transition_function.transitions.get(
-            &(self.current_state, self.tape[self.head_position])
-        );
+    pub fn make_transition(&mut self) -> bool {
+        let possible_transition = self
+            .transition_function
+            .transitions
+            .get(&(self.current_state, self.tape[self.head_position]));
 
         match possible_transition {
             Some(transition) => {
@@ -57,27 +53,27 @@ impl TuringMachine {
 
                 // check if the Turing Machine reached a halting state
                 self.is_halted(self.current_state);
-                
+
                 return true;
             }
             None => {
                 return false;
             }
-        }      
+        }
     }
 
     /// Executes the movement of the Turing Machine's head
     /// depending on the `direction` provided.
-    pub fn move_(&mut self, direction: u8) {
+    pub fn move_(&mut self, direction: Direction) {
         match direction {
-            LEFT => self.move_left(),
-            RIGHT => self.move_right(),
+            Direction::LEFT => self.move_left(),
+            Direction::RIGHT => self.move_right(),
             _ => {}
         }
     }
 
     /// Moves the `head` (`head_position`) of the Turing Machine
-    /// to the left only if it does not exceed the 
+    /// to the left only if it does not exceed the
     /// left most position of the tape.
     pub fn move_left(&mut self) {
         // if the head is at the left most position,
@@ -102,13 +98,15 @@ impl TuringMachine {
         }
     }
 
-    /// Checks if the `state` given as parameter 
+    /// Checks if the `state` given as parameter
     /// represents a halting state for the Turing Machine.
-    /// 
+    ///
     /// Modifies the `halted` state accordingly.
     pub fn is_halted(&mut self, state: u8) {
-        match state {
-            STATE_ACCEPT | STATE_REJECT => { self.halted = true },
+        let state_: SpecialStates = SpecialStates::transform(state);
+
+        match state_ {
+            SpecialStates::STATE_ACCEPT | SpecialStates::STATE_REJECT => self.halted = true,
             _ => {}
         }
     }
