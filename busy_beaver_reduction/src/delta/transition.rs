@@ -1,5 +1,6 @@
 use crate::turing_machine::direction::Direction;
 
+#[derive(Clone)]
 pub struct Transition {
     pub from_state: u8,
     pub from_symbol: u8,

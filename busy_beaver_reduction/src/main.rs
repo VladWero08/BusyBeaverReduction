@@ -1,7 +1,7 @@
 mod delta;
 mod turing_machine;
 
-use delta::transition::Transition;
-use turing_machine::turing_machine::TuringMachine;
+use crate::delta::transition::Transition;
+use crate::turing_machine::generator::Generator;
 
-fn main() {}
+fn main() { }
