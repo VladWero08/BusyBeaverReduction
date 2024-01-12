@@ -106,7 +106,7 @@ impl TuringMachine {
         let state_: SpecialStates = SpecialStates::transform(state);
 
         match state_ {
-            SpecialStates::STATE_ACCEPT | SpecialStates::STATE_REJECT => self.halted = true,
+            SpecialStates::STATE_HALT => self.halted = true,
             _ => {}
         }
     }

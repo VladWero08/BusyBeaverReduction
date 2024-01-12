@@ -1,7 +1,6 @@
 pub enum SpecialStates {
     STATE_START,
-    STATE_ACCEPT,
-    STATE_REJECT,
+    STATE_HALT,
     DEFAULT,
 }
 
@@ -9,8 +8,7 @@ impl SpecialStates {
     pub fn value(&self) -> u8 {
         match *self {
             SpecialStates::STATE_START => 0,
-            SpecialStates::STATE_ACCEPT => 8,
-            SpecialStates::STATE_REJECT => 9,
+            SpecialStates::STATE_HALT => 101,
             SpecialStates::DEFAULT => 1,
         }
     }
@@ -18,8 +16,7 @@ impl SpecialStates {
     pub fn transform(state: u8) -> Self {
         match state {
             0 => SpecialStates::STATE_START,
-            8 => SpecialStates::STATE_ACCEPT,
-            9 => SpecialStates::STATE_REJECT,
+            101 => SpecialStates::STATE_HALT,
             _ => SpecialStates::DEFAULT,
         }
     }
