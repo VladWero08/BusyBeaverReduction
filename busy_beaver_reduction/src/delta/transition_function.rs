@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use crate::delta::transition::Transition;
 use crate::turing_machine::direction::Direction;
 
+#[derive(PartialEq, Clone, Debug)]
 pub struct TransitionFunction {
     pub transitions: HashMap<(u8, u8), (u8, u8, Direction)>,
 }

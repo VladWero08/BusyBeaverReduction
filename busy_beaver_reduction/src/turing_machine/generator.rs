@@ -73,7 +73,7 @@ impl Generator {
         // desired number of transition for a transition function
         let maximum_number_of_transitions: usize =
             self.states.len() as usize * self.alphabet.len() as usize;
-        
+
         // where all transition functions will be computed
         let transition_function: &mut TransitionFunction = &mut TransitionFunction::new();
         let index: usize = 0;
@@ -109,7 +109,7 @@ impl Generator {
         // if the maximum depth was reached, exit
         if deepness == max_deepness {
             self.n += 1;
-            println!("{}", transition_function.encode());
+            // println!("{}", transition_function.encode());
             return;
         }
 
