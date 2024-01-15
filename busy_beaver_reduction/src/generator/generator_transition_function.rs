@@ -1,3 +1,5 @@
+use std::sync::mpsc::{Sender};
+
 use crate::delta::transition::Transition;
 use crate::delta::transition_function::TransitionFunction;
 use crate::turing_machine::direction::Direction;
@@ -5,16 +7,14 @@ use crate::turing_machine::special_states::SpecialStates;
 
 const DIRECTIONS: [Direction; 2] = [Direction::LEFT, Direction::RIGHT];
 
-pub struct Generator {
+pub struct GeneratorTransitionFunction {
     pub states: Vec<u8>,
     pub states_final: Vec<u8>,
-    /// considers input alphabet = tape alphabet
     pub alphabet: Vec<u8>,
     pub all_transitions: Vec<Transition>,
-    pub n: i128,
 }
 
-impl Generator {
+impl GeneratorTransitionFunction {
     pub fn n_state_generator(n: u8) -> Self {
         // initiate the states vector with the starting state
         let mut states: Vec<u8> = vec![SpecialStates::STATE_START.value()];
@@ -30,12 +30,11 @@ impl Generator {
         // fot the states_final vector also add the halting state
         states_final.push(SpecialStates::STATE_HALT.value());
 
-        return Generator {
+        return GeneratorTransitionFunction {
             states: states,
             states_final: states_final,
             alphabet: vec![0, 1],
             all_transitions: vec![],
-            n: 0,
         };
     }
 
@@ -69,13 +68,14 @@ impl Generator {
     ///  N = number of possible transitions
     ///  K = number of desired transitions
     ///
-    pub fn generate_all_transition_functions(&mut self) {
+    pub fn generate_all_transition_functions(&mut self, tx_unfiltered_functions: Sender<Vec<TransitionFunction>>) {
         // desired number of transition for a transition function
         let maximum_number_of_transitions: usize =
             self.states.len() as usize * self.alphabet.len() as usize;
 
         // where all transition functions will be computed
         let transition_function: &mut TransitionFunction = &mut TransitionFunction::new();
+        let transition_functions_set: &mut Vec<TransitionFunction> = &mut Vec::new();
         let index: usize = 0;
         let deepness: usize = 0;
 
@@ -89,6 +89,8 @@ impl Generator {
         self.generate_all_transition_combinations(
             index,
             transition_function,
+            transition_functions_set,
+            tx_unfiltered_functions,
             deepness,
             maximum_number_of_transitions,
         );
@@ -103,13 +105,24 @@ impl Generator {
         &mut self,
         index: usize,
         transition_function: &mut TransitionFunction,
+        transition_functions_set: &mut Vec<TransitionFunction>,
+        tx_unfiltered_functions: Sender<Vec<TransitionFunction>>,
         deepness: usize,
         max_deepness: usize,
     ) {
         // if the maximum depth was reached, exit
         if deepness == max_deepness {
-            self.n += 1;
-            // println!("{}", transition_function.encode());
+            // add the transition function to the set
+            transition_functions_set.push(transition_function.clone());
+
+            // check if the set reached the batch size
+            if transition_functions_set.len() == 0 {
+                // send the unfiltered transitions to the filter
+                tx_unfiltered_functions.send(transition_functions_set.clone()).unwrap();
+                // empty the transition functions vector
+                transition_functions_set.clear();
+            }
+
             return;
         }
 
@@ -132,6 +145,8 @@ impl Generator {
                 self.generate_all_transition_combinations(
                     i + 1,
                     transition_function,
+                    transition_functions_set,
+                    tx_unfiltered_functions,
                     deepness + 1,
                     max_deepness,
                 );

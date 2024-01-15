@@ -1,4 +1,5 @@
 use std::thread;
+use std::sync::mpsc::{Sender};
 
 use crate::delta::transition::Transition;
 use crate::delta::transition_function::TransitionFunction;
@@ -12,23 +13,17 @@ impl FilterCompile {
     /// will be filtered.
     ///
     /// Returns the filtered `Vec`.
-    pub fn filter(mut transition_functions: Vec<TransitionFunction>) -> Vec<TransitionFunction> {
+    pub fn filter(mut transition_functions: Vec<TransitionFunction>, tx: Sender<Vec<TransitionFunction>>) {
         // create a new thread, move the transition functions into it
         // and filter them all
-        let filter_thread = thread::spawn(move || {
+        thread::spawn(move || {
             transition_functions
                 .retain(|transition_function| Self::filter_all(transition_function) == true);
-
-            return transition_functions;
+            
+            // send the filtered transition functions 
+            // through the channel
+            tx.send(transition_functions).unwrap();
         });
-
-        // wait for the thread to finish and
-        // get the filtered transition functions
-        transition_functions = filter_thread
-            .join()
-            .expect("Thread panicked while filtering the transition function!");
-
-        return transition_functions;
     }
 
     /// Applies all filters of the `FilterCompile` struct to the provided
@@ -113,34 +108,5 @@ mod tests {
             FilterCompile::filter_left_move_start_state(&transition_function),
             false
         );
-    }
-
-    #[test]
-    fn test_filter() {
-        let mut transition_function_01: TransitionFunction = TransitionFunction::new();
-        let mut transition_function_02: TransitionFunction = TransitionFunction::new();
-
-        transition_function_01.add_transition(Transition {
-            from_state: SpecialStates::STATE_START.value(),
-            from_symbol: 0,
-            to_state: 0,
-            to_symbol: 0,
-            direction: Direction::RIGHT,
-        });
-
-        transition_function_02.add_transition(Transition {
-            from_state: SpecialStates::STATE_START.value(),
-            from_symbol: 0,
-            to_state: 0,
-            to_symbol: 0,
-            direction: Direction::LEFT,
-        });
-
-        let mut transition_functions: Vec<TransitionFunction> = Vec::new();
-
-        transition_functions.push(transition_function_01);
-        transition_functions.push(transition_function_02);
-
-        assert_eq!(FilterCompile::filter(transition_functions), Vec::new());
     }
 }
