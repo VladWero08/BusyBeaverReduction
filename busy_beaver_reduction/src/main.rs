@@ -1,25 +1,35 @@
-mod turing_machine;
 mod delta;
-mod generator;
 mod filter;
+mod generator;
+mod logger;
+mod turing_machine;
 
-use std::time::Instant;
+use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
-use std::sync::mpsc::{channel, Sender, Receiver};
-
-use generator::generator_transition_function::{self, GeneratorTransitionFunction};
 
 use crate::delta::transition_function::TransitionFunction;
 use crate::filter::filter::Filter;
 use crate::generator::generator::Generator;
+use crate::logger::logger::load_logger;
 
 fn main() {
-    let (tx_unfiltered, rx_unfiltered): (Sender<Vec<TransitionFunction>>, Receiver<Vec<TransitionFunction>>) = channel();
-    let (tx_filtered, rx_filtered): (Sender<Vec<TransitionFunction>>, Receiver<Vec<TransitionFunction>>) = channel();
+    load_logger();
 
-    let filter_handle = thread::spawn(|| {
+    let (tx_unfiltered, rx_unfiltered): (
+        Sender<Vec<TransitionFunction>>,
+        Receiver<Vec<TransitionFunction>>,
+    ) = channel();
+
+    let (tx_filtered, rx_filtered): (
+        Sender<Vec<TransitionFunction>>,
+        Receiver<Vec<TransitionFunction>>,
+    ) = channel();
+
+    let mut generator_: Generator = Generator::new(2, tx_unfiltered, rx_filtered);
+
+    let filter_handle = thread::spawn(move || {
         let filter_: Filter = Filter {
-            unfiltered_functions: 10,
+            number_of_batches: generator_.number_of_batches,
             tx_filtered_functions: tx_filtered,
             rx_unfiltered_functions: rx_unfiltered,
         };
@@ -27,15 +37,10 @@ fn main() {
         filter_.receive_all_unfiltered();
     });
 
-    let generator_handle = thread::spawn(|| {
-        let mut generator_: Generator = Generator {
-            transition_functions: Vec::new(),
-            batches: 10,
-            tx_unfiltered_functions: tx_unfiltered,
-            rx_filtered_functions: rx_filtered,
-        };
-
-        generator_.send_unfiletered(2);
-        generator_.receive_filtered();
+    let generator_handle = thread::spawn(move || {
+        generator_.generate();
     });
+
+    let _ = filter_handle.join();
+    let _ = generator_handle.join();
 }

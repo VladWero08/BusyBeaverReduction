@@ -1,7 +1,6 @@
+use std::sync::mpsc::Sender;
 use std::thread;
-use std::sync::mpsc::{Sender};
 
-use crate::delta::transition::Transition;
 use crate::delta::transition_function::TransitionFunction;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
@@ -13,14 +12,17 @@ impl FilterCompile {
     /// will be filtered.
     ///
     /// Returns the filtered `Vec`.
-    pub fn filter(mut transition_functions: Vec<TransitionFunction>, tx: Sender<Vec<TransitionFunction>>) {
+    pub fn filter(
+        mut transition_functions: Vec<TransitionFunction>,
+        tx: Sender<Vec<TransitionFunction>>,
+    ) {
         // create a new thread, move the transition functions into it
         // and filter them all
         thread::spawn(move || {
             transition_functions
                 .retain(|transition_function| Self::filter_all(transition_function) == true);
-            
-            // send the filtered transition functions 
+
+            // send the filtered transition functions
             // through the channel
             tx.send(transition_functions).unwrap();
         });
@@ -73,6 +75,7 @@ impl FilterCompile {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::delta::transition::Transition;
 
     #[test]
     fn test_filter_right_move_loop() {
