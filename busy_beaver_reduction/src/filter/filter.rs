@@ -1,4 +1,3 @@
-use log::info;
 use std::sync::mpsc::{Receiver, Sender};
 
 use crate::delta::transition_function::TransitionFunction;

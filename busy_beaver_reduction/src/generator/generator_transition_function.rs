@@ -63,7 +63,7 @@ impl GeneratorTransitionFunction {
 
     /// Generates every transition that is possible
     /// withing the `states` and `alphabet` of
-    fn generate_all_transitions(&mut self) {
+    pub fn generate_all_transitions(&mut self) {
         let alphabet = ALPHABET
             .iter()
             .map(|item| format!("{}", item))
