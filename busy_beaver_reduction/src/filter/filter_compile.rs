@@ -35,7 +35,8 @@ impl FilterCompile {
             && Self::filter_start_state_moves_right_loop(transition_function)
             && Self::filter_moves_to_halting_state(transition_function)
             && Self::filter_moves_right_loop(transition_function)
-            && Self::filter_no_moves_to_halting_state(transition_function);
+            && Self::filter_no_moves_to_halting_state(transition_function)
+            && Self::filter_no_symbol_writing(transition_function);
     }
 
     /// Checks whether the start state of the transition function
@@ -140,6 +141,21 @@ impl FilterCompile {
             }
         }
 
+        return false;
+    }
+
+    /// Check if there is at least one transition that will
+    /// write a `1` symbol on the tape.
+    fn filter_no_symbol_writing(transition_function: &TransitionFunction) -> bool {
+        for transition in transition_function.transitions.clone() {
+            let transition_next = transition.1;
+            let transition_next_symbol = transition_next.1;
+
+            if transition_next_symbol == 1 {
+                return true;
+            }
+        }
+    
         return false;
     }
 }
