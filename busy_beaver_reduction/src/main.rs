@@ -28,11 +28,11 @@ fn main() {
     let mut generator_: Generator = Generator::new(2, tx_unfiltered, rx_filtered);
 
     let filter_handle = thread::spawn(move || {
-        let filter_: Filter = Filter {
-            number_of_batches: generator_.number_of_batches,
-            tx_filtered_functions: tx_filtered,
-            rx_unfiltered_functions: rx_unfiltered,
-        };
+        let mut filter_: Filter = Filter::new(
+            generator_.number_of_batches,
+            tx_filtered,
+            rx_unfiltered,
+        );
 
         filter_.receive_all_unfiltered();
     });

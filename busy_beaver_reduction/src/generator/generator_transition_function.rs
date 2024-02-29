@@ -118,7 +118,9 @@ impl GeneratorTransitionFunction {
         let maximum_number_of_transitions: usize =
             self.states.len() as usize * ALPHABET.len() as usize;
         let maximum_number_of_transition_functions: usize =
-            GeneratorTransitionFunction::get_maximum_no_of_transition_functions(self.states.len() as u8);
+            GeneratorTransitionFunction::get_maximum_no_of_transition_functions(
+                self.states.len() as u8
+            );
 
         // where all transition functions will be computed
         let transition_function: &mut TransitionFunction = &mut TransitionFunction::new();
@@ -207,7 +209,7 @@ impl GeneratorTransitionFunction {
             if !transition_function.transitions.contains_key(transition_key) {
                 transition_function.add_transition(self.all_transitions[i]);
 
-                // check if the transition function passes the 
+                // check if the transition function passes the
                 // generation filters
                 if FilterGenerate::filter_all(transition_function) == true {
                     // recursive call to continue on adding

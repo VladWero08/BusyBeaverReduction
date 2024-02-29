@@ -14,10 +14,10 @@ impl FilterGenerate {
     /// Applies all filters of the `FilterGenerate` struct to the provided
     /// `TransitionFunction` and returns true if they were `all` passed.
     pub fn filter_all(transition_function: &TransitionFunction) -> bool {
-        return Self::filter_start_state_moves_left(transition_function);
-            // && Self::filter_start_state_moves_right_loop(transition_function)
-            // && Self::filter_moves_right_loop(transition_function);
-            // && Self::filter_moves_to_halting_state(transition_function);
+        return Self::filter_start_state_moves_left(transition_function)
+            && Self::filter_start_state_moves_right_loop(transition_function)
+            && Self::filter_moves_right_loop(transition_function)
+            && Self::filter_moves_to_halting_state(transition_function);
     }
 
     /// Checks whether the start state of the transition function

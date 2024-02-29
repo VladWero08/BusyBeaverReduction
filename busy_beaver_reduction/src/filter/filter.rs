@@ -6,28 +6,44 @@ use crate::filter::filter_compile::FilterCompile;
 pub struct Filter {
     pub number_of_batches: usize,
 
-    pub tx_filtered_functions: Sender<Vec<TransitionFunction>>,
+    pub tx_filtered_functions: Option<Sender<Vec<TransitionFunction>>>,
     pub rx_unfiltered_functions: Receiver<Vec<TransitionFunction>>,
 }
 
 impl Filter {
+    pub fn new(
+        number_of_batches: usize,
+        tx_filtered_functions: Sender<Vec<TransitionFunction>>,
+        rx_unfiltered_functions: Receiver<Vec<TransitionFunction>>,
+    ) -> Self {
+        Filter { 
+            number_of_batches: number_of_batches,
+            tx_filtered_functions: Some(tx_filtered_functions),
+            rx_unfiltered_functions: rx_unfiltered_functions
+        }
+    }
+
     /// Listens to the chanel where the `Generator` will publish
     /// transition functions, than proceeds to filter them
     /// and return them back to the generator through another channel.
-    pub fn receive_all_unfiltered(&self) {
-        for _ in 0..self.number_of_batches {
-            let transition_functions: Vec<TransitionFunction> =
-                self.rx_unfiltered_functions.recv().unwrap();
-
+    pub fn receive_all_unfiltered(&mut self) {
+        for transition_functions in self.rx_unfiltered_functions.iter() {
             self.send_filtered(transition_functions);
-        }
+        }        
+
+        let _ = std::mem::replace(&mut self.tx_filtered_functions, None);
     }
 
     /// Filters the received transition functions and
     /// send them back to the `Generator` that produced them.
     fn send_filtered(&self, transition_functions: Vec<TransitionFunction>) {
-        let tx_filtered_functions_clone = self.tx_filtered_functions.clone();
-        // filter the received tranisition functions
-        FilterCompile::filter(transition_functions, tx_filtered_functions_clone);
+        match &self.tx_filtered_functions { 
+            Some(sender) => {
+                let tx_filtered_functions_clone = sender.clone();
+                // filter the received tranisition functions
+                FilterCompile::filter(transition_functions, tx_filtered_functions_clone);       
+            }
+            None => {}
+        }
     }
 }
