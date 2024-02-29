@@ -4,6 +4,7 @@ use log::info;
 
 use crate::delta::transition::Transition;
 use crate::delta::transition_function::TransitionFunction;
+use crate::filter::filter_generate::FilterGenerate;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
@@ -33,7 +34,7 @@ impl GeneratorTransitionFunction {
         states_final.push(SpecialStates::STATE_HALT.value());
 
         info!(
-            "Generator with {} states has been created!",
+            "Generator, based on backtracking, with {} states has been created!",
             number_of_states
         );
 
@@ -117,9 +118,7 @@ impl GeneratorTransitionFunction {
         let maximum_number_of_transitions: usize =
             self.states.len() as usize * ALPHABET.len() as usize;
         let maximum_number_of_transition_functions: usize =
-            GeneratorTransitionFunction::get_maximum_no_of_transition_functions(
-                self.states.len() as u8
-            );
+            GeneratorTransitionFunction::get_maximum_no_of_transition_functions(self.states.len() as u8);
 
         // where all transition functions will be computed
         let transition_function: &mut TransitionFunction = &mut TransitionFunction::new();
@@ -208,17 +207,21 @@ impl GeneratorTransitionFunction {
             if !transition_function.transitions.contains_key(transition_key) {
                 transition_function.add_transition(self.all_transitions[i]);
 
-                // recursive call to continue on adding
-                // new transitions to the combintation
-                self.generate_all_transition_combinations(
-                    i + 1,
-                    transition_function,
-                    transition_functions_set,
-                    tx_unfiltered_functions,
-                    deepness + 1,
-                    max_deepness,
-                    batch_size,
-                );
+                // check if the transition function passes the 
+                // generation filters
+                if FilterGenerate::filter_all(transition_function) == true {
+                    // recursive call to continue on adding
+                    // new transitions to the combintation
+                    self.generate_all_transition_combinations(
+                        i + 1,
+                        transition_function,
+                        transition_functions_set,
+                        tx_unfiltered_functions,
+                        deepness + 1,
+                        max_deepness,
+                        batch_size,
+                    );
+                }
 
                 // after returing from the recursive call,
                 // delete the transition and continue on with the others

@@ -46,8 +46,7 @@ impl Generator {
     /// Creates a new thread were the all the generation
     /// of transition functions will take place.
     fn send_unfiletered(&self) {
-        let mut generator: GeneratorTransitionFunction =
-            GeneratorTransitionFunction::new(self.number_of_states);
+        let mut generator: GeneratorTransitionFunction = GeneratorTransitionFunction::new(self.number_of_states);
 
         let tx_unfiltered_functions: Sender<Vec<TransitionFunction>> =
             self.tx_unfiltered_functions.clone();
@@ -74,9 +73,7 @@ impl Generator {
     /// have been filtered by the compile time filter.
     fn filter_status(&mut self) {
         let maximum_no_of_transition_functions: usize =
-            GeneratorTransitionFunction::get_maximum_no_of_transition_functions(
-                self.number_of_states,
-            );
+            GeneratorTransitionFunction::get_maximum_no_of_transition_functions(self.number_of_states);
 
         let filtered_total = maximum_no_of_transition_functions - self.transition_functions.len();
         let filtered_percentage = filtered_total * 100 / maximum_no_of_transition_functions;
