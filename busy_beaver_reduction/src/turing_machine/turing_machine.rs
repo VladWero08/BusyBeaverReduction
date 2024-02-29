@@ -2,13 +2,9 @@ use crate::delta::transition_function::TransitionFunction;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
-// the alphabets will only contain 0s and 1s,
-// and the tape size will be considered to be infinite
-// const INPUT_ALPHABET: [u8; 2] = [0, 1];
-// const TAPE_ALPHABET: [u8; 2] = [0, 1];
-
 pub struct TuringMachine {
     pub tape: Vec<u8>,
+    pub tape_increased: bool,
     pub head_position: usize,
     pub current_state: u8,
     pub steps: u32,
@@ -20,11 +16,19 @@ impl TuringMachine {
     pub fn new() -> Self {
         TuringMachine {
             tape: vec![0],
+            tape_increased: false,
             head_position: 0,
             current_state: SpecialStates::STATE_START.value(),
             steps: 0,
             transition_function: TransitionFunction::new(),
             halted: false,
+        }
+    }
+
+    /// Runs the turing machine until it is halted.
+    pub fn execute(&mut self) {
+        while self.halted != true {
+            self.make_transition();
         }
     }
 
@@ -44,6 +48,8 @@ impl TuringMachine {
 
         match possible_transition {
             Some(transition) => {
+                // by default, tape is not increased
+                self.tape_increased = false;
                 // change the current state
                 self.current_state = transition.0;
                 // write the new value to the tape
@@ -52,7 +58,7 @@ impl TuringMachine {
                 self.move_(transition.2);
 
                 // check if the Turing Machine reached a halting state
-                self.is_halted(self.current_state);
+                self.is_halted();
 
                 return true;
             }
@@ -95,6 +101,7 @@ impl TuringMachine {
         // will be pointing at
         if self.tape.len() - 1 < self.head_position {
             self.tape.push(0);
+            self.tape_increased = true;
         }
     }
 
@@ -102,8 +109,8 @@ impl TuringMachine {
     /// represents a halting state for the Turing Machine.
     ///
     /// Modifies the `halted` state accordingly.
-    pub fn is_halted(&mut self, state: u8) {
-        let state_: SpecialStates = SpecialStates::transform(state);
+    pub fn is_halted(&mut self) {
+        let state_: SpecialStates = SpecialStates::transform(self.current_state);
 
         match state_ {
             SpecialStates::STATE_HALT => self.halted = true,
