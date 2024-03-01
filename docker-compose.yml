@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  database:
+    container_name: bb-database
+    image: mysql
+    env_file:
+      - .env
+    restart: always
+    environment:
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+    ports:
+      - '3306:3306'
+    volumes:
+      - busy-beaver-database:/var/lib/mysql:rw
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/schema.sql:ro
+volumes:
+  busy-beaver-database:
+    driver: local
