@@ -5,12 +5,16 @@ use crate::turing_machine::direction::Direction;
 
 #[derive(PartialEq, Clone, Debug)]
 pub struct TransitionFunction {
+    pub number_of_states: u8,
+    pub number_of_symbols: u8,
     pub transitions: HashMap<(u8, u8), (u8, u8, Direction)>,
 }
 
 impl TransitionFunction {
-    pub fn new() -> Self {
+    pub fn new(number_of_states: u8, number_of_symbols: u8) -> Self {
         TransitionFunction {
+            number_of_states: number_of_states,
+            number_of_symbols: number_of_symbols,
             transitions: HashMap::new(),
         }
     }
@@ -79,7 +83,7 @@ mod tests {
     #[test]
     fn test_decode() {
         let transition_function_encoded = "0,0,0,0,1|0,1,1,0,1|1,1,0,1,0".to_string();
-        let mut transition_function: TransitionFunction = TransitionFunction::new();
+        let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
 
         transition_function.decode(transition_function_encoded);
 

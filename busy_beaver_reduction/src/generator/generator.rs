@@ -52,9 +52,10 @@ impl Generator {
         match &self.tx_unfiltered_functions {
             Some(sender) => {
                 let tx_unfiltered_functions: Sender<Vec<TransitionFunction>> = sender.clone();
-                
+
                 thread::spawn(move || {
-                    generator.generate_all_transition_functions(tx_unfiltered_functions, BATCH_SIZE);
+                    generator
+                        .generate_all_transition_functions(tx_unfiltered_functions, BATCH_SIZE);
                 });
             }
             None => {}

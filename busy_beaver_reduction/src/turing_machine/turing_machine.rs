@@ -3,25 +3,29 @@ use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
 pub struct TuringMachine {
+    pub transition_function: TransitionFunction,
     pub tape: Vec<u8>,
     pub tape_increased: bool,
     pub head_position: usize,
     pub current_state: u8,
-    pub steps: u32,
-    pub transition_function: TransitionFunction,
     pub halted: bool,
+    pub steps: i64,
+    pub score: i32,
+    pub runtime: i32,
 }
 
 impl TuringMachine {
-    pub fn new() -> Self {
+    pub fn new(mut transition_function: TransitionFunction) -> Self {
         TuringMachine {
+            transition_function: transition_function,
             tape: vec![0],
             tape_increased: false,
             head_position: 0,
             current_state: SpecialStates::STATE_START.value(),
-            steps: 0,
-            transition_function: TransitionFunction::new(),
             halted: false,
+            steps: 0,
+            score: 0,
+            runtime: 0,
         }
     }
 

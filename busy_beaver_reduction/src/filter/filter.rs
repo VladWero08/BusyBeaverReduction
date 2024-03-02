@@ -16,10 +16,10 @@ impl Filter {
         tx_filtered_functions: Sender<Vec<TransitionFunction>>,
         rx_unfiltered_functions: Receiver<Vec<TransitionFunction>>,
     ) -> Self {
-        Filter { 
+        Filter {
             number_of_batches: number_of_batches,
             tx_filtered_functions: Some(tx_filtered_functions),
-            rx_unfiltered_functions: rx_unfiltered_functions
+            rx_unfiltered_functions: rx_unfiltered_functions,
         }
     }
 
@@ -29,7 +29,7 @@ impl Filter {
     pub fn receive_all_unfiltered(&mut self) {
         for transition_functions in self.rx_unfiltered_functions.iter() {
             self.send_filtered(transition_functions);
-        }        
+        }
 
         let _ = std::mem::replace(&mut self.tx_filtered_functions, None);
     }
@@ -37,11 +37,11 @@ impl Filter {
     /// Filters the received transition functions and
     /// send them back to the `Generator` that produced them.
     fn send_filtered(&self, transition_functions: Vec<TransitionFunction>) {
-        match &self.tx_filtered_functions { 
+        match &self.tx_filtered_functions {
             Some(sender) => {
                 let tx_filtered_functions_clone = sender.clone();
                 // filter the received tranisition functions
-                FilterCompile::filter(transition_functions, tx_filtered_functions_clone);       
+                FilterCompile::filter(transition_functions, tx_filtered_functions_clone);
             }
             None => {}
         }

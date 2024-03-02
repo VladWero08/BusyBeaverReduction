@@ -1,0 +1,95 @@
+use dotenv::dotenv;
+use log::{error, info};
+use std::env;
+
+use sqlx::Pool;
+use sqlx::mysql::{MySql, MySqlPoolOptions, MySqlQueryResult};
+
+use crate::turing_machine::turing_machine::TuringMachine;
+
+const MAX_POOL_CONNECTIONS: u32 = 8;
+
+pub struct DatabaseManager {
+    connection_string: String,
+    pool: Pool<MySql>,
+}
+
+impl DatabaseManager {
+    pub async fn new() -> Option<Self> {
+        let connection_string = DatabaseManager::get_connection_string();
+        let pool = DatabaseManager::get_pool(&connection_string).await;
+        
+        match pool {
+            Ok(pool) => {
+                return Some(DatabaseManager {
+                    connection_string: connection_string,
+                    pool: pool
+                })
+            }
+            Err(error) => {
+                error!("DatabaseManager couldn't be created: {}", error);
+                return None;
+            }
+        }
+    }
+
+    /// Loads and gets the `connection string` to the database,
+    /// from the `.env` file configured in the crate.
+    fn get_connection_string() -> String {
+        dotenv().ok();
+
+        match env::var("DATABASE_URL") {
+            Ok(connection_string) => {
+                return connection_string.to_string();
+            }
+
+            Err(error) => {
+                error!(
+                    "While setting the connection string for the database: {}",
+                    error
+                );
+                return "".to_string();
+            }
+        }
+    }
+
+    /// Gets the `pool` of connections using the `connection_string`.
+    async fn get_pool(connection_string: &String) -> Result<Pool<MySql>, sqlx::Error>{
+        let pool = MySqlPoolOptions::new()
+            .max_connections(MAX_POOL_CONNECTIONS)
+            .connect(&connection_string)
+            .await?;
+
+        Ok(pool)
+    }
+
+    /// Using the `pool` of connections, insert the given `TuringMachine` 
+    /// into the `turing_machines` table.
+    pub async fn insert_turing_machine(&mut self, turing_machine: TuringMachine) {
+        // get the encoding of the transition function, as a string,
+        // so it is valid for insert in the database
+        let transition_function_encoded = turing_machine.transition_function.encode();
+
+        let result: Result<MySqlQueryResult, sqlx::Error> = sqlx::query("
+            INSERT INTO turing_machines 
+            (transition_function, number_of_states, number_of_symbols, halted, steps, score, time_to_run) 
+            VALUES
+            (?, ?, ?, ?, ?, ?, ?)")
+            .bind(transition_function_encoded)
+            .bind(turing_machine.transition_function.number_of_states)
+            .bind(turing_machine.transition_function.number_of_symbols)
+            .bind(turing_machine.halted)
+            .bind(turing_machine.steps)
+            .bind(turing_machine.score)
+            .bind(turing_machine.runtime)
+            .execute(&self.pool)
+            .await;
+
+        match result {
+            Ok(_) => {}
+            Err(error) => {
+                error!("While inserting turing machine in the database: {}", error);
+            }
+        }
+    }
+}

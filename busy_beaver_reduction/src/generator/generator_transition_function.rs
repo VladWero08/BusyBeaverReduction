@@ -123,7 +123,8 @@ impl GeneratorTransitionFunction {
             );
 
         // where all transition functions will be computed
-        let transition_function: &mut TransitionFunction = &mut TransitionFunction::new();
+        let transition_function: &mut TransitionFunction =
+            &mut TransitionFunction::new(self.states.len() as u8, ALPHABET.len() as u8);
         let transition_functions_set: &mut Vec<TransitionFunction> = &mut Vec::new();
         let index: usize = 0;
         let deepness: usize = 0;

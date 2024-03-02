@@ -1,3 +1,4 @@
+mod database;
 mod delta;
 mod filter;
 mod generator;
@@ -12,7 +13,8 @@ use crate::filter::filter::Filter;
 use crate::generator::generator::Generator;
 use crate::logger::logger::load_logger;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     load_logger();
 
     let (tx_unfiltered, rx_unfiltered): (
@@ -28,11 +30,8 @@ fn main() {
     let mut generator_: Generator = Generator::new(2, tx_unfiltered, rx_filtered);
 
     let filter_handle = thread::spawn(move || {
-        let mut filter_: Filter = Filter::new(
-            generator_.number_of_batches,
-            tx_filtered,
-            rx_unfiltered,
-        );
+        let mut filter_: Filter =
+            Filter::new(generator_.number_of_batches, tx_filtered, rx_unfiltered);
 
         filter_.receive_all_unfiltered();
     });

@@ -115,7 +115,7 @@ mod tests {
 
     #[test]
     fn test_filter_start_state_moves_right_loop() {
-        let mut transition_function: TransitionFunction = TransitionFunction::new();
+        let mut transition_function: TransitionFunction = TransitionFunction::new(0, 0);
 
         transition_function.add_transition(Transition {
             from_state: SpecialStates::STATE_START.value(),
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_filter_left_move_start_state() {
-        let mut transition_function: TransitionFunction = TransitionFunction::new();
+        let mut transition_function: TransitionFunction = TransitionFunction::new(0, 0);
 
         transition_function.add_transition(Transition {
             from_state: SpecialStates::STATE_START.value(),
