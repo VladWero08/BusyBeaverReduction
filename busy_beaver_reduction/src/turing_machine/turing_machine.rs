@@ -1,4 +1,7 @@
+use std::time::{Duration, Instant};
+
 use crate::delta::transition_function::TransitionFunction;
+use crate::filter::filter_runtime::FilterRuntime;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
@@ -11,7 +14,7 @@ pub struct TuringMachine {
     pub halted: bool,
     pub steps: i64,
     pub score: i32,
-    pub runtime: i32,
+    pub runtime: i64,
 }
 
 impl TuringMachine {
@@ -29,11 +32,30 @@ impl TuringMachine {
         }
     }
 
-    /// Runs the turing machine until it is halted.
+    /// Runs the turing machine until it is halted or until
+    /// it is stopped by a runtime filter. 
+    /// 
+    /// Uses a `FilterRuntime` object that is watching
+    /// carefully the execution of the turing machine. 
+    /// If at any time the filters are not passed, stop the execution.
     pub fn execute(&mut self) {
+        let start_time: Instant = Instant::now();
+        let mut filter_runtime: FilterRuntime = FilterRuntime::new();
+        self.make_transition();
+
         while self.halted != true {
+            let filter_result: bool = filter_runtime.filter_all(&self);
+            
+            if filter_result == false {
+                break;
+            }
+            
             self.make_transition();
         }
+
+        // set the metrics for the turing machine
+        self.set_score();
+        self.set_runtime(start_time.elapsed());
     }
 
     /// Tries to make a transition of the Turing Machine
@@ -75,6 +97,8 @@ impl TuringMachine {
     /// Executes the movement of the Turing Machine's head
     /// depending on the `direction` provided.
     pub fn move_(&mut self, direction: Direction) {
+        self.steps += 1;
+
         match direction {
             Direction::LEFT => self.move_left(),
             Direction::RIGHT => self.move_right(),
@@ -120,5 +144,21 @@ impl TuringMachine {
             SpecialStates::STATE_HALT => self.halted = true,
             _ => {}
         }
+    }
+
+    /// Calculate the score from the tape, the number
+    /// of 1s written on the tape.
+    pub fn set_score(&mut self) {
+        for &symbol in self.tape.iter() {
+            if symbol == 1 {
+                self.score += 1;
+            }
+        }
+    }
+
+    /// Sets the runtime for the execution of the
+    /// turing machine, given a `core::time::Duration` object.
+    pub fn set_runtime(&mut self, time: Duration) {
+        self.runtime = time.as_secs() as i64;
     }
 }

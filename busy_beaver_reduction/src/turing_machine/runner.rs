@@ -15,6 +15,9 @@ impl TuringMachineRunner {
         }
     }
 
+    /// Given an array of `TransitionFunction`s, use the pool of threads
+    /// to create a new Turing Machine for each one
+    /// and start executing them.
     pub fn run(&mut self, transition_functions: Vec<TransitionFunction>) {
         for transition_function in transition_functions {
             self.pool.execute(move || {
