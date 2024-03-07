@@ -22,6 +22,7 @@ impl DatabaseManager {
 
         match pool {
             Ok(pool) => {
+                info!("DatabaseManager created successfully!");
                 return Some(DatabaseManager {
                     connection_string: connection_string,
                     pool: pool,
