@@ -69,11 +69,26 @@ impl FilterRuntime {
                 return !(turing_machine.current_state == transition.0
                     && turing_machine.tape[turing_machine.head_position] == transition.1
                     && transition.1 == 0
-                    && transition.2 == Direction::LEFT);
+                    && transition.2 == Direction::RIGHT);
             }
             None => {
                 return true;
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn filter_long_escapees() {
+        // TO DO
+    }
+
+    #[test]
+    fn filter_short_escapees() {
+        // TO DO
     }
 }

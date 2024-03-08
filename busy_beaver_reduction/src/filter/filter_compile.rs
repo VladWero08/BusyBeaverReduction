@@ -69,3 +69,58 @@ impl FilterCompile {
         return false;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::{delta::transition::Transition, turing_machine::direction::Direction};
+
+    use super::*;
+
+    #[test]
+    fn filter_no_moves_to_halting_state() {
+        let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
+
+        transition_function.add_transition(Transition {
+            from_state: 0,
+            from_symbol: 0,
+            to_state: 1,
+            to_symbol: 0,
+            direction: Direction::RIGHT,
+        });
+
+        transition_function.add_transition(Transition {
+            from_state: 1,
+            from_symbol: 0,
+            to_state: 0,
+            to_symbol: 0,
+            direction: Direction::LEFT,
+        });
+
+        let filter_result = FilterCompile::filter_no_moves_to_halting_state(&transition_function);
+        assert_eq!(filter_result, false);
+    }
+
+    #[test]
+    fn filter_no_symbol_writing() {
+        let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
+
+        transition_function.add_transition(Transition {
+            from_state: 0,
+            from_symbol: 0,
+            to_state: 1,
+            to_symbol: 0,
+            direction: Direction::RIGHT,
+        });
+
+        transition_function.add_transition(Transition {
+            from_state: 1,
+            from_symbol: 0,
+            to_state: 0,
+            to_symbol: 0,
+            direction: Direction::RIGHT,
+        });
+
+        let filter_result = FilterCompile::filter_no_symbol_writing(&transition_function);
+        assert_eq!(filter_result, false);
+    }
+}

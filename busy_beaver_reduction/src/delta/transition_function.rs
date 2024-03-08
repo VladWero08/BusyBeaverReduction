@@ -75,13 +75,45 @@ impl TransitionFunction {
 
 #[cfg(test)]
 mod tests {
+    use crate::delta::transition;
+
     use super::*;
 
-    // #[test]
-    // fn test_encode() {}
+    #[test]
+    fn encode() {
+        let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
+        
+        let transition_01: Transition = Transition {
+            from_state: 0,
+            from_symbol: 0,
+            to_state: 1,
+            to_symbol: 1,
+            direction: Direction::RIGHT,
+        };
+        let transition_02: Transition = Transition {
+            from_state: 0,
+            from_symbol: 1,
+            to_state: 1,
+            to_symbol: 1,
+            direction: Direction::RIGHT,
+        };
+
+        transition_function.add_transition(transition_01);
+        transition_function.add_transition(transition_02);
+    
+        let transition_function_encoded = transition_function.encode();
+
+        if transition_function_encoded == "0,0,1,1,1|0,1,1,1,1" {
+            assert_eq!(true, true);
+        } else if transition_function_encoded == "0,1,1,1,1|0,0,1,1,1"{
+            assert_eq!(true, true);
+        } else {
+            assert_eq!(true, false);
+        }
+    }
 
     #[test]
-    fn test_decode() {
+    fn decode() {
         let transition_function_encoded = "0,0,0,0,1|0,1,1,0,1|1,1,0,1,0".to_string();
         let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
 

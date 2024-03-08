@@ -32,6 +32,22 @@ impl TuringMachine {
         }
     }
 
+    /// Calculate the score from the tape, the number
+    /// of 1s written on the tape.
+    pub fn set_score(&mut self) {
+        for &symbol in self.tape.iter() {
+            if symbol == 1 {
+                self.score += 1;
+            }
+        }
+    }
+
+    /// Sets the runtime for the execution of the
+    /// turing machine, given a `core::time::Duration` object.
+    pub fn set_runtime(&mut self, time: Duration) {
+        self.runtime = time.as_secs() as i64;
+    }
+
     /// Runs the turing machine until it is halted or until
     /// it is stopped by a runtime filter. 
     /// 
@@ -144,21 +160,5 @@ impl TuringMachine {
             SpecialStates::STATE_HALT => self.halted = true,
             _ => {}
         }
-    }
-
-    /// Calculate the score from the tape, the number
-    /// of 1s written on the tape.
-    pub fn set_score(&mut self) {
-        for &symbol in self.tape.iter() {
-            if symbol == 1 {
-                self.score += 1;
-            }
-        }
-    }
-
-    /// Sets the runtime for the execution of the
-    /// turing machine, given a `core::time::Duration` object.
-    pub fn set_runtime(&mut self, time: Duration) {
-        self.runtime = time.as_secs() as i64;
     }
 }

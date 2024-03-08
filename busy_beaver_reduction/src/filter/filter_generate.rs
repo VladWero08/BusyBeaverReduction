@@ -86,7 +86,7 @@ impl FilterGenerate {
         // the starting state exists
         match start_state_value {
             Some(transition) => {
-                next_state_key = (transition.0, transition.1);
+                next_state_key = (transition.0, 0);
             }
             None => {
                 return true;
@@ -114,7 +114,7 @@ mod tests {
     use crate::delta::transition::Transition;
 
     #[test]
-    fn test_filter_start_state_moves_right_loop() {
+    fn filter_start_state_moves_right_loop() {
         let mut transition_function: TransitionFunction = TransitionFunction::new(0, 0);
 
         transition_function.add_transition(Transition {
@@ -132,7 +132,7 @@ mod tests {
     }
 
     #[test]
-    fn test_filter_left_move_start_state() {
+    fn filter_left_move_start_state() {
         let mut transition_function: TransitionFunction = TransitionFunction::new(0, 0);
 
         transition_function.add_transition(Transition {
@@ -147,5 +147,53 @@ mod tests {
             FilterGenerate::filter_start_state_moves_left(&transition_function),
             false
         );
+    }
+
+    #[test]
+    fn filter_moves_to_halting_state() {
+        let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
+
+        transition_function.add_transition(Transition {
+            from_state: SpecialStates::STATE_START.value(),
+            from_symbol: 0,
+            to_state: SpecialStates::STATE_HALT.value(),
+            to_symbol: 1,
+            direction: Direction::RIGHT,
+        });
+
+        transition_function.add_transition(Transition {
+            from_state: SpecialStates::STATE_START.value(),
+            from_symbol: 1,
+            to_state: 1,
+            to_symbol: 0,
+            direction: Direction::RIGHT,
+        });
+
+        let filter_result = FilterGenerate::filter_moves_to_halting_state(&transition_function);
+        assert_eq!(filter_result, false);
+    }
+
+    #[test]
+    fn filter_moves_right_loop() {
+        let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
+
+        transition_function.add_transition(Transition {
+            from_state: SpecialStates::STATE_START.value(),
+            from_symbol: 0,
+            to_state: 1,
+            to_symbol: 1,
+            direction: Direction::RIGHT,
+        });
+
+        transition_function.add_transition(Transition {
+            from_state: 1,
+            from_symbol: 0,
+            to_state: 1,
+            to_symbol: 0,
+            direction: Direction::RIGHT,
+        });
+
+        let filter_result = FilterGenerate::filter_moves_right_loop(&transition_function);
+        assert_eq!(filter_result, false);
     }
 }
