@@ -20,8 +20,8 @@ pub struct GeneratorTransitionFunction {
 impl GeneratorTransitionFunction {
     pub fn new(number_of_states: u8) -> Self {
         // initiate the states vector with the starting state
-        let mut states: Vec<u8> = vec![SpecialStates::STATE_START.value()];
-        let mut states_final: Vec<u8> = vec![SpecialStates::STATE_START.value()];
+        let mut states: Vec<u8> = vec![SpecialStates::StateStart.value()];
+        let mut states_final: Vec<u8> = vec![SpecialStates::StateStart.value()];
 
         // for the rest of the states, assign each one
         // a number from 1 to n
@@ -31,7 +31,7 @@ impl GeneratorTransitionFunction {
         }
 
         // fot the states_final vector also add the halting state
-        states_final.push(SpecialStates::STATE_HALT.value());
+        states_final.push(SpecialStates::StateHalt.value());
 
         info!(
             "Generator, based on backtracking, with {} states has been created!",

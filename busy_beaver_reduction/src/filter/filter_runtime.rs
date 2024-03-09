@@ -10,10 +10,8 @@ pub struct FilterRuntime {
 
 impl FilterRuntime {
     pub fn new() -> Self {
-        return FilterRuntime {
-            counter: 0
-        }
-    }    
+        return FilterRuntime { counter: 0 };
+    }
 
     /// Applies all filters of the `FilterRuntime` struct to the provided
     /// `TuringMachine` and returns true if they were `all` passed.

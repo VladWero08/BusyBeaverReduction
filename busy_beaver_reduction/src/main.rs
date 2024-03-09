@@ -30,8 +30,7 @@ async fn main() {
     let mut generator_: Generator = Generator::new(2, tx_unfiltered, rx_filtered);
 
     let filter_handle = thread::spawn(move || {
-        let mut filter_: Filter =
-            Filter::new(generator_.number_of_batches, tx_filtered, rx_unfiltered);
+        let mut filter_: Filter = Filter::new(tx_filtered, rx_unfiltered);
 
         filter_.receive_all_unfiltered();
     });

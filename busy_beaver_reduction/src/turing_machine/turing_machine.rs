@@ -18,13 +18,13 @@ pub struct TuringMachine {
 }
 
 impl TuringMachine {
-    pub fn new(mut transition_function: TransitionFunction) -> Self {
+    pub fn new(transition_function: TransitionFunction) -> Self {
         TuringMachine {
             transition_function: transition_function,
             tape: vec![0],
             tape_increased: false,
             head_position: 0,
-            current_state: SpecialStates::STATE_START.value(),
+            current_state: SpecialStates::StateStart.value(),
             halted: false,
             steps: 0,
             score: 0,
@@ -49,10 +49,10 @@ impl TuringMachine {
     }
 
     /// Runs the turing machine until it is halted or until
-    /// it is stopped by a runtime filter. 
-    /// 
+    /// it is stopped by a runtime filter.
+    ///
     /// Uses a `FilterRuntime` object that is watching
-    /// carefully the execution of the turing machine. 
+    /// carefully the execution of the turing machine.
     /// If at any time the filters are not passed, stop the execution.
     pub fn execute(&mut self) {
         let start_time: Instant = Instant::now();
@@ -61,11 +61,11 @@ impl TuringMachine {
 
         while self.halted != true {
             let filter_result: bool = filter_runtime.filter_all(&self);
-            
+
             if filter_result == false {
                 break;
             }
-            
+
             self.make_transition();
         }
 
@@ -118,7 +118,6 @@ impl TuringMachine {
         match direction {
             Direction::LEFT => self.move_left(),
             Direction::RIGHT => self.move_right(),
-            _ => {}
         }
     }
 
@@ -157,7 +156,7 @@ impl TuringMachine {
         let state_: SpecialStates = SpecialStates::transform(self.current_state);
 
         match state_ {
-            SpecialStates::STATE_HALT => self.halted = true,
+            SpecialStates::StateHalt => self.halted = true,
             _ => {}
         }
     }

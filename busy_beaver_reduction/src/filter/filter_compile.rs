@@ -46,7 +46,7 @@ impl FilterCompile {
             let transition_next = transition.1;
             let transition_next_state = transition_next.0;
 
-            if transition_next_state == SpecialStates::STATE_HALT.value() {
+            if transition_next_state == SpecialStates::StateHalt.value() {
                 return true;
             }
         }

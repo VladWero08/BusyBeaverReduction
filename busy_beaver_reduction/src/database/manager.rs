@@ -9,6 +9,7 @@ use crate::delta::transition_function::TransitionFunction;
 use crate::turing_machine::turing_machine::TuringMachine;
 
 const MAX_POOL_CONNECTIONS: u32 = 8;
+const MAX_RETRIES: u8 = 3;
 
 pub struct DatabaseManager {
     connection_string: String,
@@ -17,22 +18,32 @@ pub struct DatabaseManager {
 
 impl DatabaseManager {
     pub async fn new() -> Option<Self> {
-        let connection_string = DatabaseManager::get_connection_string();
-        let pool = DatabaseManager::get_pool(&connection_string).await;
+        // counter for the number of times tried to connect
+        // to the database
+        let mut connection_retries: u8 = 0;
 
-        match pool {
-            Ok(pool) => {
-                info!("DatabaseManager created successfully!");
-                return Some(DatabaseManager {
-                    connection_string: connection_string,
-                    pool: pool,
-                })
+        while connection_retries < MAX_RETRIES {
+            let connection_string = DatabaseManager::get_connection_string();
+            let pool = DatabaseManager::get_pool(&connection_string).await;
+
+            match pool {
+                Ok(pool) => {
+                    info!("DatabaseManager created successfully!");
+                    return Some(DatabaseManager {
+                        connection_string: connection_string,
+                        pool: pool,
+                    });
+                }
+                Err(error) => {
+                    error!("DatabaseManager couldn't be created: {}", error);
+                }
             }
-            Err(error) => {
-                error!("DatabaseManager couldn't be created: {}", error);
-                return None;
-            }
+
+            // increase the number of tries
+            connection_retries += 1;
         }
+
+        return None;
     }
 
     /// Loads and gets the `connection string` to the database,

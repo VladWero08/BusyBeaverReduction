@@ -23,7 +23,7 @@ impl FilterGenerate {
     /// Checks whether the start state of the transition function
     /// provided will try to move to the LEFT on input 0.
     fn filter_start_state_moves_left(transition_function: &TransitionFunction) -> bool {
-        let start_state_key: &(u8, u8) = &(SpecialStates::STATE_START.value(), 0);
+        let start_state_key: &(u8, u8) = &(SpecialStates::StateStart.value(), 0);
         let start_state_value: Option<&(u8, u8, Direction)> =
             transition_function.transitions.get(start_state_key);
 
@@ -41,13 +41,13 @@ impl FilterGenerate {
     /// provided will run into a self loop, moving infinitely to the right
     /// and writing 0s on the tape (self loops).
     fn filter_start_state_moves_right_loop(transition_function: &TransitionFunction) -> bool {
-        let start_state_key: &(u8, u8) = &(SpecialStates::STATE_START.value(), 0);
+        let start_state_key: &(u8, u8) = &(SpecialStates::StateStart.value(), 0);
         let start_state_value: Option<&(u8, u8, Direction)> =
             transition_function.transitions.get(start_state_key);
 
         match start_state_value {
             Some(transition) => {
-                return !(transition.0 == SpecialStates::STATE_START.value()
+                return !(transition.0 == SpecialStates::StateStart.value()
                     && transition.2 == Direction::RIGHT);
             }
             None => {
@@ -59,13 +59,13 @@ impl FilterGenerate {
     /// Checks whether the start state of the transition function
     /// will move directly to the halting state.
     fn filter_moves_to_halting_state(transition_function: &TransitionFunction) -> bool {
-        let start_state_key: &(u8, u8) = &(SpecialStates::STATE_START.value(), 0);
+        let start_state_key: &(u8, u8) = &(SpecialStates::StateStart.value(), 0);
         let start_state_value: Option<&(u8, u8, Direction)> =
             transition_function.transitions.get(start_state_key);
 
         match start_state_value {
             Some(transition) => {
-                return !(transition.0 == SpecialStates::STATE_HALT.value());
+                return !(transition.0 == SpecialStates::StateHalt.value());
             }
             None => {
                 return true;
@@ -76,7 +76,7 @@ impl FilterGenerate {
     /// Checks whether the start state of the transition function
     /// will move to the right and enter a state that will be self looping.
     fn filter_moves_right_loop(transition_function: &TransitionFunction) -> bool {
-        let start_state_key: &(u8, u8) = &(SpecialStates::STATE_START.value(), 0);
+        let start_state_key: &(u8, u8) = &(SpecialStates::StateStart.value(), 0);
         let start_state_value: Option<&(u8, u8, Direction)> =
             transition_function.transitions.get(start_state_key);
 
@@ -118,7 +118,7 @@ mod tests {
         let mut transition_function: TransitionFunction = TransitionFunction::new(0, 0);
 
         transition_function.add_transition(Transition {
-            from_state: SpecialStates::STATE_START.value(),
+            from_state: SpecialStates::StateStart.value(),
             from_symbol: 0,
             to_state: 0,
             to_symbol: 0,
@@ -136,7 +136,7 @@ mod tests {
         let mut transition_function: TransitionFunction = TransitionFunction::new(0, 0);
 
         transition_function.add_transition(Transition {
-            from_state: SpecialStates::STATE_START.value(),
+            from_state: SpecialStates::StateStart.value(),
             from_symbol: 0,
             to_state: 0,
             to_symbol: 0,
@@ -154,15 +154,15 @@ mod tests {
         let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
 
         transition_function.add_transition(Transition {
-            from_state: SpecialStates::STATE_START.value(),
+            from_state: SpecialStates::StateStart.value(),
             from_symbol: 0,
-            to_state: SpecialStates::STATE_HALT.value(),
+            to_state: SpecialStates::StateHalt.value(),
             to_symbol: 1,
             direction: Direction::RIGHT,
         });
 
         transition_function.add_transition(Transition {
-            from_state: SpecialStates::STATE_START.value(),
+            from_state: SpecialStates::StateStart.value(),
             from_symbol: 1,
             to_state: 1,
             to_symbol: 0,
@@ -178,7 +178,7 @@ mod tests {
         let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
 
         transition_function.add_transition(Transition {
-            from_state: SpecialStates::STATE_START.value(),
+            from_state: SpecialStates::StateStart.value(),
             from_symbol: 0,
             to_state: 1,
             to_symbol: 1,

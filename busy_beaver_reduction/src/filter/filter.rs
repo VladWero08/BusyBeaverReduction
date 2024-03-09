@@ -4,20 +4,16 @@ use crate::delta::transition_function::TransitionFunction;
 use crate::filter::filter_compile::FilterCompile;
 
 pub struct Filter {
-    pub number_of_batches: usize,
-
     pub tx_filtered_functions: Option<Sender<Vec<TransitionFunction>>>,
     pub rx_unfiltered_functions: Receiver<Vec<TransitionFunction>>,
 }
 
 impl Filter {
     pub fn new(
-        number_of_batches: usize,
         tx_filtered_functions: Sender<Vec<TransitionFunction>>,
         rx_unfiltered_functions: Receiver<Vec<TransitionFunction>>,
     ) -> Self {
         Filter {
-            number_of_batches: number_of_batches,
             tx_filtered_functions: Some(tx_filtered_functions),
             rx_unfiltered_functions: rx_unfiltered_functions,
         }

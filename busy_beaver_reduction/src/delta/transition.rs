@@ -51,7 +51,7 @@ impl Transition {
     ///
     /// ### Return:
     /// - `String`: encoded transition  as String, from Transition object
-    /// 
+    ///
     /// ### Example:
     ///  Transition transition = { <br/>
     ///     `from_state`: 0,    <br/>
@@ -117,7 +117,7 @@ mod tests {
     #[test]
     fn encode_from_hashmap() {
         let transition: (&(u8, u8), &(u8, u8, Direction)) = (&(0, 0), &(1, 1, Direction::RIGHT));
-        let transition_encoding_from_hashmap: String = Transition::encode_from_hashmap(transition); 
+        let transition_encoding_from_hashmap: String = Transition::encode_from_hashmap(transition);
 
         assert_eq!(transition_encoding_from_hashmap, "0,0,1,1,1");
     }

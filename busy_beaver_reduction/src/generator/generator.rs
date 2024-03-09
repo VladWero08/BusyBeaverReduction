@@ -11,7 +11,6 @@ const BATCH_SIZE: usize = 100;
 pub struct Generator {
     pub number_of_states: u8,
     pub transition_functions: Vec<TransitionFunction>,
-    pub number_of_batches: usize,
 
     pub tx_unfiltered_functions: Option<Sender<Vec<TransitionFunction>>>,
     pub rx_filtered_functions: Receiver<Vec<TransitionFunction>>,
@@ -23,21 +22,9 @@ impl Generator {
         tx_unfiltered_functions: Sender<Vec<TransitionFunction>>,
         rx_filtered_functions: Receiver<Vec<TransitionFunction>>,
     ) -> Self {
-        let maximum_no_of_transition_functions: usize =
-            GeneratorTransitionFunction::get_maximum_no_of_transition_functions(number_of_states);
-        let mut number_of_batches: usize = maximum_no_of_transition_functions / BATCH_SIZE;
-
-        // because the number of maximum transition functions
-        // might not be divisible by the batch size, add + 1
-        // for the rest of transition functions left out
-        if maximum_no_of_transition_functions % BATCH_SIZE != 0 {
-            number_of_batches += 1;
-        }
-
         Generator {
             transition_functions: Vec::new(),
             number_of_states: number_of_states,
-            number_of_batches: number_of_batches,
             tx_unfiltered_functions: Some(tx_unfiltered_functions),
             rx_filtered_functions: rx_filtered_functions,
         }
@@ -68,9 +55,9 @@ impl Generator {
         let _ = std::mem::replace(&mut self.tx_unfiltered_functions, None);
     }
 
-    /// Listens to the channel for filtered transitions functions, 
+    /// Listens to the channel for filtered transitions functions,
     /// and once received, extends the `self.transition_functions` vector.
-    /// 
+    ///
     /// Listens until the connection of the channel will be dropped by the sender.
     /// After it stops listening, logs a statistic of the filtering done.
     fn receive_filtered(&mut self) {

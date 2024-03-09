@@ -82,7 +82,7 @@ mod tests {
     #[test]
     fn encode() {
         let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
-        
+
         let transition_01: Transition = Transition {
             from_state: 0,
             from_symbol: 0,
@@ -100,12 +100,12 @@ mod tests {
 
         transition_function.add_transition(transition_01);
         transition_function.add_transition(transition_02);
-    
+
         let transition_function_encoded = transition_function.encode();
 
         if transition_function_encoded == "0,0,1,1,1|0,1,1,1,1" {
             assert_eq!(true, true);
-        } else if transition_function_encoded == "0,1,1,1,1|0,0,1,1,1"{
+        } else if transition_function_encoded == "0,1,1,1,1|0,0,1,1,1" {
             assert_eq!(true, true);
         } else {
             assert_eq!(true, false);
