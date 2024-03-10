@@ -15,7 +15,7 @@ pub struct TuringMachineRunner {
 }
 
 impl TuringMachineRunner {
-    pub async fn new(tx_turing_machine: Sender<TuringMachine>) -> Self {
+    pub fn new(tx_turing_machine: Sender<TuringMachine>) -> Self {
         TuringMachineRunner {
             pool: ThreadPool::new(WORKERS),
             tx_turing_machines: Some(tx_turing_machine),
@@ -34,7 +34,7 @@ impl TuringMachineRunner {
     /// machine in the database.
     pub fn run(&mut self, transition_functions: Vec<TransitionFunction>) {
         info!(
-            "Started running turing machine. {} total to run...",
+            "Started running turing machine. {} total machines to run...",
             transition_functions.len()
         );
 
@@ -42,11 +42,12 @@ impl TuringMachineRunner {
             let turing_machine_channel: Sender<TuringMachine> =
                 self.tx_turing_machines.clone().unwrap();
 
+            // build the turing machine based on the transition
+            // function received, than execute it
             self.pool.execute(move || {
                 let mut turing_machine = TuringMachine::new(transition_function);
-
                 turing_machine.execute();
-                turing_machine_channel.send(turing_machine);
+                let _ = turing_machine_channel.send(turing_machine);
             })
         }
 

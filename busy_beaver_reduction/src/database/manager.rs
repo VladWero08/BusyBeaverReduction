@@ -162,4 +162,12 @@ impl DatabaseManager {
             }
         }
     }
+
+    /// Using the `pool` of connections, insert the given vector of
+    /// `TuringMachine`s into the `turing machines` table. 
+    /// 
+    /// A batch insert will be made with all of them.
+    pub async fn batch_insert_turing_machines(&mut self, turing_machines: Vec<TuringMachine>) {
+        // TO DO
+    }
 }
