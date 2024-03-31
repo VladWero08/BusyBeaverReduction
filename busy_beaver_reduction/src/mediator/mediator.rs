@@ -12,21 +12,21 @@ use crate::turing_machine::turing_machine::TuringMachine;
 
 pub struct Mediator {
     number_of_states: u8,
-    transition_functions: Vec<TransitionFunction>
+    transition_functions: Vec<TransitionFunction>,
 }
 
 impl Mediator {
     pub fn new(number_of_states: u8) -> Self {
         Mediator {
             number_of_states: number_of_states,
-            transition_functions: vec![]
+            transition_functions: vec![],
         }
     }
 
     /// Creates a new thread in which the `Filter`
     /// will be listening for unfiltered transition functions and
     /// will send them filtered back to the `Generator`.
-    /// 
+    ///
     /// Creates a new thread in which the `Generator`
     /// will be generating unfiltered transition functions and
     /// will wait to receive the filtered from the `Filter`.
@@ -47,10 +47,7 @@ impl Mediator {
 
         // creates a new thread for the filter
         let filter_handle = thread::spawn(move || {
-            let mut filter = Filter::new(
-                tx_filtered_functions,
-                rx_unfiltered_functions
-            );
+            let mut filter = Filter::new(tx_filtered_functions, rx_unfiltered_functions);
 
             filter.receive_all_unfiltered();
         });
@@ -60,7 +57,7 @@ impl Mediator {
             let mut generator = Generator::new(
                 self.number_of_states,
                 tx_unfiltered_functions,
-                rx_filtered_functions
+                rx_filtered_functions,
             );
 
             generator.generate();
@@ -75,10 +72,10 @@ impl Mediator {
         self.transition_functions = transition_functions_generated;
     }
 
-    /// Creates a new thread that will build `TuringMachine`s based 
-    /// on the transition functions generated & filtered. 
+    /// Creates a new thread that will build `TuringMachine`s based
+    /// on the transition functions generated & filtered.
     /// Afterwards, it will execute them all and send them to the `DatabaseManagerRunner`.
-    /// 
+    ///
     /// Creates a new thread that will wait for executed `TuringMachine`s;
     /// after receiving them, it will insert them in the database.
     pub async fn run_and_insert(self) {

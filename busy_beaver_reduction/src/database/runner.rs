@@ -1,10 +1,10 @@
-use std::thread;
 use std::sync::mpsc::Receiver;
+use std::thread;
 
 use sqlx::database;
 
-use crate::turing_machine::turing_machine::TuringMachine;
 use super::manager::DatabaseManager;
+use crate::turing_machine::turing_machine::TuringMachine;
 
 pub struct DatabaseManagerRunner {
     rx_turing_machines: Receiver<TuringMachine>,
@@ -12,9 +12,7 @@ pub struct DatabaseManagerRunner {
 
 impl DatabaseManagerRunner {
     pub fn new(rx_turing_machines: Receiver<TuringMachine>) -> Self {
-        DatabaseManagerRunner {
-            rx_turing_machines
-        }
+        DatabaseManagerRunner { rx_turing_machines }
     }
 
     /// Listens to the communication channel, which has the TuringMachineRunner

@@ -1,3 +1,5 @@
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
 use std::time::{Duration, Instant};
 
 use crate::delta::transition_function::TransitionFunction;
@@ -159,5 +161,18 @@ impl TuringMachine {
             SpecialStates::StateHalt => self.halted = true,
             _ => {}
         }
+    }
+
+    /// Encodes the Turing Machine's overall state as
+    /// a tuple `(String, usize, u8)`, where:
+    /// - String: hashed value of the tape
+    /// - usize: current head position
+    /// - u8: current state
+    pub fn encode(&self) -> (String, usize, u8) {
+        let mut hasher = Sha256::new();
+        hasher.input(&self.tape);
+        let hashed_tape = hasher.result_str();
+
+        (hashed_tape, self.head_position, self.current_state)
     }
 }
