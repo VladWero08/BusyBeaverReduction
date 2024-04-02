@@ -1,8 +1,12 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 
+use log::error;
 use log::info;
+use sqlx::database;
+use tokio::sync::mpsc::error;
 
+use crate::database::manager::DatabaseManager;
 use crate::database::runner::DatabaseManagerRunner;
 use crate::delta::transition_function::TransitionFunction;
 use crate::filter::filter::Filter;
@@ -10,27 +14,42 @@ use crate::generator::generator::Generator;
 use crate::turing_machine::runner::TuringMachineRunner;
 use crate::turing_machine::turing_machine::TuringMachine;
 
+const BATCH_SIZE: usize = 100;
+
 pub struct Mediator {
     number_of_states: u8,
-    transition_functions: Vec<TransitionFunction>,
+    turing_machines: Vec<TuringMachine>,
 }
 
 impl Mediator {
     pub fn new(number_of_states: u8) -> Self {
         Mediator {
             number_of_states: number_of_states,
-            transition_functions: vec![],
+            turing_machines: vec![],
         }
     }
 
-    /// Creates a new thread in which the `Filter`
+    /// Checks if the generation already took place, aka
+    /// there are turing machines with the desired number of states
+    /// in the database. If there aren'y any, it:
+    ///
+    /// - creates a new thread in which the `Filter`
     /// will be listening for unfiltered transition functions and
     /// will send them filtered back to the `Generator`.
     ///
-    /// Creates a new thread in which the `Generator`
+    /// - creates a new thread in which the `Generator`
     /// will be generating unfiltered transition functions and
     /// will wait to receive the filtered from the `Filter`.
-    pub fn generate_and_filter(mut self) {
+    pub async fn generate_and_filter(mut self) {
+        // try loading turing machines from the database
+        if self.load_turing_machines().await == true {
+            info!(
+                "Loaded turing machines from the database, a total of {}.",
+                self.turing_machines.len()
+            );
+            return;
+        }
+
         // mpsc channel used for sending unfiltered transition functions
         // from the generator to the filter
         let (tx_unfiltered_functions, rx_unfiltered_functions): (
@@ -62,6 +81,8 @@ impl Mediator {
 
             generator.generate();
 
+            // returns the transition functions generated
+            // by the generator
             return generator.transition_functions;
         });
 
@@ -69,7 +90,95 @@ impl Mediator {
         let _ = filter_handle.join();
         let transition_functions_generated = generator_handle.join().unwrap();
 
-        self.transition_functions = transition_functions_generated;
+        self.make_turing_machines(transition_functions_generated);
+        self.insert_turing_machines().await;
+    }
+
+    /// After the generator and filter finished to create
+    /// the first instances of transition functions, use them
+    /// to create instances of `TuringMachine`s.
+    fn make_turing_machines(&mut self, transition_functions: Vec<TransitionFunction>) {
+        for transition_function in transition_functions {
+            let turing_machine = TuringMachine::new(transition_function);
+            self.turing_machines.push(turing_machine);
+        }
+    }
+
+    /// Tries to retrieve any turing machine from the database
+    /// that has `number_of_states` states.
+    ///
+    /// If any exist, set the turing machines of the
+    /// mediator to be equal to the ones extracted from
+    /// the database.
+    ///
+    /// Used when trying to generate turing machines, in order
+    /// to skip some computations.
+    async fn load_turing_machines(&mut self) -> bool {
+        let db_option = DatabaseManager::new().await;
+
+        match db_option {
+            // if the database manager was succesfully created,
+            // try to select all the turing machines with the
+            // desired number of states
+            Some(mut database_manager) => {
+                let tm_option = database_manager
+                    .select_turing_machines_to_run(self.number_of_states, 2)
+                    .await;
+
+                match tm_option {
+                    // if the select did not fail, check if
+                    // any such Turing Machines exist in the database
+                    Some(turing_machines) => {
+                        // if they do, it means the generation was already done,
+                        // so save the turing machines directly
+                        if turing_machines.len() > 0 {
+                            self.turing_machines = turing_machines;
+                        }
+
+                        return self.turing_machines.len() > 0;
+                    }
+                    None => {}
+                }
+            }
+            None => {}
+        }
+
+        return false;
+    }
+
+    /// After the Turing Machines were made from the
+    /// generated Transition Functions, this function inserts
+    /// them in the database in batches.
+    async fn insert_turing_machines(&self) {
+        let db_option = DatabaseManager::new().await;
+
+        match db_option {
+            Some(mut database_manager) => {
+                // iterate through the turing machines and
+                // insert them in batches
+                for batch in (0..self.turing_machines.len()).step_by(BATCH_SIZE) {
+                    let mut batch_size = BATCH_SIZE;
+
+                    if self.turing_machines.len() - batch < BATCH_SIZE {
+                        batch_size = self.turing_machines.len() - batch;
+                    }
+
+                    database_manager
+                        .batch_insert_turing_machines(
+                            &self.turing_machines[batch..batch + batch_size],
+                        )
+                        .await;
+
+                    // log after each 10 batch insertion
+                    if batch % 1000 == 0 {
+                        info!("Inserted {}th batch of 100 Turing Machines...", batch / 100);
+                    }
+                }
+
+                info!("Inserted all Turing Machines in the database!");
+            }
+            None => {}
+        }
     }
 
     /// Creates a new thread that will build `TuringMachine`s based
@@ -95,7 +204,7 @@ impl Mediator {
         // creates a new thread to run turing machines
         let tm_runner_handler = thread::spawn(move || {
             let mut tm_runner = TuringMachineRunner::new(tx_turing_machine);
-            tm_runner.run(self.transition_functions);
+            tm_runner.run(self.turing_machines);
         });
 
         // wait for both threads to finish

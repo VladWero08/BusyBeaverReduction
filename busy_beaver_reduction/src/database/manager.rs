@@ -7,6 +7,7 @@ use sqlx::mysql::{MySql, MySqlArguments, MySqlPoolOptions, MySqlQueryResult, MyS
 use sqlx::{Pool, Row};
 
 use crate::delta::transition_function::{self, TransitionFunction};
+use crate::turing_machine;
 use crate::turing_machine::turing_machine::TuringMachine;
 
 const MAX_POOL_CONNECTIONS: u32 = 8;
@@ -77,12 +78,39 @@ impl DatabaseManager {
         Ok(pool)
     }
 
+    /// Given a `MySqlRow1 object, that should contain
+    /// an entry from the `turing_machines` table, transform
+    /// it into a TuringMachine object.
+    ///
+    /// Returns the `TuringMachine` obtained.
+    fn mysqlrow_to_turing_machine(&self, row: MySqlRow) -> TuringMachine {
+        // reconstruct the transition function
+        let transition_function_encoded = row.get(1);
+        let number_of_states: i8 = row.get(2);
+        let number_of_symbols: i8 = row.get(3);
+
+        let mut transition_function =
+            TransitionFunction::new(number_of_states as u8, number_of_symbols as u8);
+
+        // decode the transition function
+        transition_function.decode(transition_function_encoded);
+
+        // reconstruct the turing machine
+        let mut turing_machine = TuringMachine::new(transition_function);
+        turing_machine.halted = row.get(4);
+        turing_machine.steps = row.get(5);
+        turing_machine.score = row.get(6);
+        turing_machine.runtime = row.get(7);
+
+        return turing_machine;
+    }
+
     /// Given a number of states and a number of symbols,
     /// selects all the turing machines with a transtion functions
-    /// that matches those numbers.
-    /// 
+    /// that matches those numbers and `didn't halt`.
+    ///
     /// Returns a `Option<Vec<TuringMachines>>` with all of them.
-    pub async fn select_turing_machines(
+    pub async fn select_turing_machines_to_run(
         &mut self,
         number_of_states: u8,
         number_of_symbols: u8,
@@ -92,7 +120,8 @@ impl DatabaseManager {
                 SELECT * 
                 FROM turing_machines 
                 WHERE number_of_states = ? 
-                    AND number_of_symbols = ?",
+                    AND number_of_symbols = ?
+                    AND halted = FALSE",
         )
         .bind(number_of_states)
         .bind(number_of_symbols)
@@ -104,23 +133,9 @@ impl DatabaseManager {
                 let mut turing_machines = Vec::<TuringMachine>::new();
 
                 for row in rows {
-                    // reconstruct the transition function
-                    let transition_function_encoded = row.get(1);
-                    
-                    let mut transition_function =
-                        TransitionFunction::new(number_of_states, number_of_symbols);
-                    
-                    // decode the transition function
-                    transition_function.decode(transition_function_encoded);
-
                     // reconstruct the turing machine
-                    let mut turing_machine = TuringMachine::new(transition_function);
-                    turing_machine.halted = row.get(4);
-                    turing_machine.steps = row.get(5);
-                    turing_machine.score = row.get(6);
-                    turing_machine.runtime = row.get(7);
-
-                    // increase the vector of turing machines from the database
+                    // from the mysqlrow
+                    let turing_machine = self.mysqlrow_to_turing_machine(row);
                     turing_machines.push(turing_machine);
                 }
 
@@ -137,18 +152,22 @@ impl DatabaseManager {
     }
 
     /// Given a turing machine, selects the turing machine
-    /// from the database based on the encoding of the transition 
-    /// function. 
-    /// 
+    /// from the database based on the encoding of the transition
+    /// function.
+    ///
     /// Returns the `id` of the entry in the database, `if the entry exists`.
-    pub async fn select_turing_machine_by_delta(&mut self, turing_machine: &TuringMachine) -> Option<i32>{
+    pub async fn select_turing_machine_by_delta(
+        &mut self,
+        turing_machine: &TuringMachine,
+    ) -> Option<i32> {
         let transition_function_encoded = turing_machine.transition_function.encode();
 
         let result: Result<MySqlRow, sqlx::Error> = sqlx::query(
             "
                 SELECT * 
                 FROM turing_machines 
-                WHERE transition_function = ?")
+                WHERE transition_function = ?",
+        )
         .bind(transition_function_encoded)
         .fetch_one(&self.pool)
         .await;
@@ -169,19 +188,21 @@ impl DatabaseManager {
 
     /// Updates the turing machine in the database, if it
     /// actually exists in the database. The check is done
-    /// using the `encoding` of the transition function. 
+    /// using the `encoding` of the transition function.
     pub async fn update_turing_machine(&mut self, turing_machine: &TuringMachine) {
         // encode the transition function as a string
         let transition_function_encoded = turing_machine.transition_function.encode();
 
-        let result: Result<MySqlQueryResult, sqlx::Error> = sqlx::query("
+        let result: Result<MySqlQueryResult, sqlx::Error> = sqlx::query(
+            "
             UPDATE turing_machines
             SET halted = ?,
             steps = ?,
             score = ?,
             time_to_run = ?
             WHERE transition_function = ?
-        ")
+        ",
+        )
         .bind(turing_machine.halted)
         .bind(turing_machine.steps)
         .bind(turing_machine.score)
@@ -231,7 +252,7 @@ impl DatabaseManager {
     /// `TuringMachine`s into the `turing machines` table.
     ///
     /// A batch insert will be made with all of them.
-    pub async fn batch_insert_turing_machines(&mut self, turing_machines: Vec<TuringMachine>) {
+    pub async fn batch_insert_turing_machines(&mut self, turing_machines: &[TuringMachine]) {
         // create and calculate the query statement
         let mut query_stmt = r#"
             INSERT INTO turing_machines 
@@ -247,15 +268,16 @@ impl DatabaseManager {
 
         // create the query for MySQL
         let mut query: Query<'_, MySql, MySqlArguments> = sqlx::query(query_stmt.as_str());
-        
+
         // for each turing machine in the vector,
         // bind its values to the query
         for turing_machine in turing_machines {
             let transition_function_encoded = turing_machine.transition_function.encode();
-            
+
             // a new query will be created after each
             // turing machine is added, that will stack them all up
-            query = query.bind(transition_function_encoded)
+            query = query
+                .bind(transition_function_encoded)
                 .bind(turing_machine.transition_function.number_of_states)
                 .bind(turing_machine.transition_function.number_of_symbols)
                 .bind(turing_machine.halted)
@@ -272,6 +294,5 @@ impl DatabaseManager {
                 error!("While batch inserting multiple turing machines: {}", error);
             }
         }
-    
     }
 }

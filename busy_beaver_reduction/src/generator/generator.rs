@@ -81,7 +81,7 @@ impl Generator {
         let filtered_percentage = filtered_total * 100 / maximum_no_of_transition_functions;
 
         info!(
-            "Filtered {}% of the transition functions. ({} / {})",
+            "Filtered {}% of the turing machines. ({} / {})",
             filtered_percentage, filtered_total, maximum_no_of_transition_functions
         );
     }

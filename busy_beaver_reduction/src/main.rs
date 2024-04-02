@@ -6,6 +6,8 @@ mod logger;
 mod mediator;
 mod turing_machine;
 
+use log::info;
+
 use crate::logger::logger::load_logger;
 use crate::mediator::mediator::Mediator;
 
@@ -14,5 +16,5 @@ async fn main() {
     load_logger();
 
     let bb_mediator = Mediator::new(2);
-    bb_mediator.generate_and_filter();
+    bb_mediator.generate_and_filter().await;
 }
