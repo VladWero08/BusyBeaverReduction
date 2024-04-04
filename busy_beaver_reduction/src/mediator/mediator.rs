@@ -1,10 +1,8 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
+use tokio;
 use std::thread;
 
-use log::error;
 use log::info;
-use sqlx::database;
-use tokio::sync::mpsc::error;
 
 use crate::database::manager::DatabaseManager;
 use crate::database::runner::DatabaseManagerRunner;
@@ -40,7 +38,7 @@ impl Mediator {
     /// - creates a new thread in which the `Generator`
     /// will be generating unfiltered transition functions and
     /// will wait to receive the filtered from the `Filter`.
-    pub async fn generate_and_filter(mut self) {
+    pub async fn generate_and_filter(&mut self) {
         // try loading turing machines from the database
         if self.load_turing_machines().await == true {
             info!(
@@ -71,10 +69,12 @@ impl Mediator {
             filter.receive_all_unfiltered();
         });
 
+        // create a copy of number of states
+        let number_of_states = self.number_of_states;
         // creates a new thread for the generator
         let generator_handle = thread::spawn(move || {
             let mut generator = Generator::new(
-                self.number_of_states,
+                number_of_states,
                 tx_unfiltered_functions,
                 rx_filtered_functions,
             );
@@ -146,7 +146,7 @@ impl Mediator {
         return false;
     }
 
-    /// After the Turing Machines were made from the
+    /// After the Turing Machines were made from the 
     /// generated Transition Functions, this function inserts
     /// them in the database in batches.
     async fn insert_turing_machines(&self) {
@@ -158,16 +158,12 @@ impl Mediator {
                 // insert them in batches
                 for batch in (0..self.turing_machines.len()).step_by(BATCH_SIZE) {
                     let mut batch_size = BATCH_SIZE;
-
+                    
                     if self.turing_machines.len() - batch < BATCH_SIZE {
                         batch_size = self.turing_machines.len() - batch;
-                    }
+                    } 
 
-                    database_manager
-                        .batch_insert_turing_machines(
-                            &self.turing_machines[batch..batch + batch_size],
-                        )
-                        .await;
+                    database_manager.batch_insert_turing_machines(&self.turing_machines[batch..batch + batch_size]).await;
 
                     // log after each 10 batch insertion
                     if batch % 1000 == 0 {
@@ -176,7 +172,7 @@ impl Mediator {
                 }
 
                 info!("Inserted all Turing Machines in the database!");
-            }
+            } 
             None => {}
         }
     }
@@ -191,24 +187,24 @@ impl Mediator {
         // mpsc channel used for sending terminated turing machines
         // from the turing machine runner to the database
         let (tx_turing_machine, rx_turing_machine): (
-            Sender<TuringMachine>,
-            Receiver<TuringMachine>,
-        ) = channel();
+            tokio::sync::mpsc::Sender<TuringMachine>,
+            tokio::sync::mpsc::Receiver<TuringMachine>,
+        ) = tokio::sync::mpsc::channel(100);
 
         // creates a new thread for the database insertions
-        let database_handler = thread::spawn(move || {
+        let database_handler = tokio::spawn(async {
             let mut database_manager_runner = DatabaseManagerRunner::new(rx_turing_machine);
-            database_manager_runner.receive_turing_machines();
+            database_manager_runner.receive_turing_machines().await;
         });
 
         // creates a new thread to run turing machines
-        let tm_runner_handler = thread::spawn(move || {
+        let tm_runner_handler = tokio::spawn(async {
             let mut tm_runner = TuringMachineRunner::new(tx_turing_machine);
-            tm_runner.run(self.turing_machines);
+            tm_runner.run(self.turing_machines).await;
         });
 
         // wait for both threads to finish
-        let _ = database_handler.join();
-        let _ = tm_runner_handler.join();
+        let _ = database_handler.await;
+        let _ = tm_runner_handler.await;
     }
 }

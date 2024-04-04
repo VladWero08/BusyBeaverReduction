@@ -7,6 +7,8 @@ use crate::filter::filter_runtime::FilterRuntime;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
+const MAX_STEPS_TO_RUN: i64 = 1_000_000; 
+
 pub struct TuringMachine {
     pub transition_function: TransitionFunction,
     pub tape: Vec<u8>,
@@ -59,9 +61,10 @@ impl TuringMachine {
     pub fn execute(&mut self) {
         let start_time: Instant = Instant::now();
         let mut filter_runtime: FilterRuntime = FilterRuntime::new();
+        
         self.make_transition();
 
-        while self.halted != true {
+        while self.halted != true && self.steps <= MAX_STEPS_TO_RUN {
             let filter_result: bool = filter_runtime.filter_all(&self);
 
             if filter_result == false {

@@ -6,15 +6,17 @@ mod logger;
 mod mediator;
 mod turing_machine;
 
-use log::info;
-
 use crate::logger::logger::load_logger;
 use crate::mediator::mediator::Mediator;
+use dotenv::dotenv;
+
 
 #[tokio::main]
 async fn main() {
+    dotenv().ok();
     load_logger();
 
-    let bb_mediator = Mediator::new(2);
+    let mut bb_mediator = Mediator::new(2);
     bb_mediator.generate_and_filter().await;
+    bb_mediator.run_and_insert().await;
 }

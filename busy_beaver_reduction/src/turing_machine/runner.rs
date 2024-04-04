@@ -1,22 +1,16 @@
-use std::sync::mpsc::Sender;
-use threadpool::ThreadPool;
+use rayon;
+use tokio::sync::mpsc::Sender;
 
-use log::info;
-
+use log::{info, error};
 use crate::turing_machine::turing_machine::TuringMachine;
 
-const WORKERS: usize = 8;
-const BATCH_SIZE: usize = 100;
-
 pub struct TuringMachineRunner {
-    pub pool: ThreadPool,
     pub tx_turing_machines: Option<Sender<TuringMachine>>,
 }
 
 impl TuringMachineRunner {
     pub fn new(tx_turing_machine: Sender<TuringMachine>) -> Self {
         TuringMachineRunner {
-            pool: ThreadPool::new(WORKERS),
             tx_turing_machines: Some(tx_turing_machine),
         }
     }
@@ -31,7 +25,7 @@ impl TuringMachineRunner {
     ///
     /// Consumer on the other side of the mpsc channel will insert the turing
     /// machines in the database.
-    pub fn run(&mut self, turing_machines: Vec<TuringMachine>) {
+    pub async fn run(&mut self, turing_machines: Vec<TuringMachine>) {
         info!(
             "Started running turing machine. {} total machines to run...",
             turing_machines.len()
@@ -43,10 +37,27 @@ impl TuringMachineRunner {
 
             // build the turing machine based on the transition
             // function received, than execute it
-            self.pool.execute(move || {
+            let (send, recv) = tokio::sync::oneshot::channel();
+
+            // create a rayon thread to execute the CPU bound task,
+            // the task of executing the turing machine
+            rayon::spawn(move || {
                 turing_machine.execute();
-                let _ = turing_machine_channel.send(turing_machine);
-            })
+                let _ = send.send(turing_machine);
+            });
+
+            let _ = match recv.await {
+                // if no error occured, send the turing machine that
+                // was executed to the database manager runner, to update its entry
+                // in the database
+                Ok(turing_machine) => {
+                    let _ = turing_machine_channel.send(turing_machine).await;
+                } 
+                // otherwise, log the error
+                Err(e) => { 
+                    error!("While receving turing machine from rayon runtime {}", e); 
+                }
+            };
         }
 
         info!("Finished running all the turing machines.");
@@ -54,6 +65,6 @@ impl TuringMachineRunner {
         // after the running of every TuringMachine,
         // drop the communication channel with the database
         let _ = std::mem::replace(&mut self.tx_turing_machines, None);
-        info!("Dropped communication channel betwenn Turing Machine runner and database.");
+        info!("Dropped communication channel betwenn Turing Machine and Database Manager runners.");
     }
 }

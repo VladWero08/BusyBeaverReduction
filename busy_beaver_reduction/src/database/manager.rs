@@ -1,4 +1,3 @@
-use dotenv::dotenv;
 use log::{error, info};
 use sqlx::query::Query;
 use std::env;
@@ -6,15 +5,13 @@ use std::env;
 use sqlx::mysql::{MySql, MySqlArguments, MySqlPoolOptions, MySqlQueryResult, MySqlRow};
 use sqlx::{Pool, Row};
 
-use crate::delta::transition_function::{self, TransitionFunction};
-use crate::turing_machine;
+use crate::delta::transition_function::TransitionFunction;
 use crate::turing_machine::turing_machine::TuringMachine;
 
 const MAX_POOL_CONNECTIONS: u32 = 8;
 const MAX_RETRIES: u8 = 3;
 
 pub struct DatabaseManager {
-    connection_string: String,
     pool: Pool<MySql>,
 }
 
@@ -32,7 +29,6 @@ impl DatabaseManager {
                 Ok(pool) => {
                     info!("DatabaseManager created successfully!");
                     return Some(DatabaseManager {
-                        connection_string: connection_string,
                         pool: pool,
                     });
                 }
@@ -51,8 +47,6 @@ impl DatabaseManager {
     /// Loads and gets the `connection string` to the database,
     /// from the `.env` file configured in the crate.
     fn get_connection_string() -> String {
-        dotenv().ok();
-
         match env::var("DATABASE_URL") {
             Ok(connection_string) => {
                 return connection_string.to_string();
@@ -189,7 +183,7 @@ impl DatabaseManager {
     /// Updates the turing machine in the database, if it
     /// actually exists in the database. The check is done
     /// using the `encoding` of the transition function.
-    pub async fn update_turing_machine(&mut self, turing_machine: &TuringMachine) {
+    pub async fn update_turing_machine(&self, turing_machine: TuringMachine) {
         // encode the transition function as a string
         let transition_function_encoded = turing_machine.transition_function.encode();
 

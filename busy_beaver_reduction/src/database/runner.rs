@@ -1,7 +1,4 @@
-use std::sync::mpsc::Receiver;
-use std::thread;
-
-use sqlx::database;
+use tokio::sync::mpsc::Receiver;
 
 use super::manager::DatabaseManager;
 use crate::turing_machine::turing_machine::TuringMachine;
@@ -20,18 +17,16 @@ impl DatabaseManagerRunner {
     /// in the database.
     ///
     /// Insert statements are made individual from the others.
-    pub fn receive_turing_machines(&mut self) {
-        for turing_machine in self.rx_turing_machines.iter() {
-            tokio::spawn(async {
-                let database = DatabaseManager::new().await;
+    pub async fn receive_turing_machines(&mut self) {
+        let database = match DatabaseManager::new().await {
+            Some(database) => database,
+            None => return,
+        };
 
-                match database {
-                    Some(mut database) => {
-                        database.insert_turing_machine(turing_machine).await;
-                    }
-                    None => {}
-                }
-            });
+        // wait for every turing machine executed to come
+        // and then update its entry in the database
+        while let Some(turing_machine) = self.rx_turing_machines.recv().await {
+            database.update_turing_machine(turing_machine).await;
         }
     }
 }
