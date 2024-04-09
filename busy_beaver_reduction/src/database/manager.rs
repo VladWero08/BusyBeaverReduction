@@ -28,9 +28,7 @@ impl DatabaseManager {
             match pool {
                 Ok(pool) => {
                     info!("DatabaseManager created successfully!");
-                    return Some(DatabaseManager {
-                        pool: pool,
-                    });
+                    return Some(DatabaseManager { pool: pool });
                 }
                 Err(error) => {
                     error!("DatabaseManager couldn't be created: {}", error);

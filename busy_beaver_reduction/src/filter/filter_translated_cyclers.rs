@@ -38,7 +38,7 @@ impl FilterTranslatedCyclers {
         // if the tape did not increase in the last iteration,
         // the filer is considered passed
         if turing_machine.tape_increased == false {
-            return false;
+            return true;
         }
 
         let history_entry = self.possible_cycler.get(&turing_machine.current_state);

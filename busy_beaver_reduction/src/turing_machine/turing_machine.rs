@@ -2,12 +2,14 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use std::time::{Duration, Instant};
 
+use log::info;
+
 use crate::delta::transition_function::TransitionFunction;
 use crate::filter::filter_runtime::FilterRuntime;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
-const MAX_STEPS_TO_RUN: i64 = 1_000_000; 
+const MAX_STEPS_TO_RUN: i64 = 1_000_000;
 
 pub struct TuringMachine {
     pub transition_function: TransitionFunction,
@@ -61,7 +63,7 @@ impl TuringMachine {
     pub fn execute(&mut self) {
         let start_time: Instant = Instant::now();
         let mut filter_runtime: FilterRuntime = FilterRuntime::new();
-        
+
         self.make_transition();
 
         while self.halted != true && self.steps <= MAX_STEPS_TO_RUN {
@@ -131,12 +133,13 @@ impl TuringMachine {
     /// left most position of the tape.
     pub fn move_left(&mut self) {
         // if the head is at the left most position,
-        // ignore the movement and exit
+        // insert a new element there
         if self.head_position == 0 {
-            return;
+            self.tape.insert(0, 0);
+            self.tape_increased = true;
+        } else {
+            self.head_position -= 1;
         }
-
-        self.head_position -= 1;
     }
 
     /// Moves the `head` (`head_position`) of the Turing Machine

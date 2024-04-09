@@ -14,10 +14,10 @@ impl FilterGenerate {
     /// Applies all filters of the `FilterGenerate` struct to the provided
     /// `TransitionFunction` and returns true if they were `all` passed.
     pub fn filter_all(transition_function: &TransitionFunction) -> bool {
-        return Self::filter_start_state_moves_left(transition_function)
-            && Self::filter_start_state_moves_right_loop(transition_function)
-            && Self::filter_moves_right_loop(transition_function)
+        return Self::filter_start_state_moves_into_loop(transition_function)
+            && Self::filter_moves_into_loop(transition_function)
             && Self::filter_moves_to_halting_state(transition_function);
+        // && Self::filter_start_state_moves_left(transition_function);
     }
 
     /// Checks whether the start state of the transition function
@@ -38,17 +38,16 @@ impl FilterGenerate {
     }
 
     /// Checks whether the start state of the transition function
-    /// provided will run into a self loop, moving infinitely to the right
-    /// and writing 0s on the tape (self loops).
-    fn filter_start_state_moves_right_loop(transition_function: &TransitionFunction) -> bool {
+    /// provided will run into a self loop, moving infinitely to 
+    /// the right / left and writing 0s on the tape (self loops).
+    fn filter_start_state_moves_into_loop(transition_function: &TransitionFunction) -> bool {
         let start_state_key: &(u8, u8) = &(SpecialStates::StateStart.value(), 0);
         let start_state_value: Option<&(u8, u8, Direction)> =
             transition_function.transitions.get(start_state_key);
 
         match start_state_value {
             Some(transition) => {
-                return !(transition.0 == SpecialStates::StateStart.value()
-                    && transition.2 == Direction::RIGHT);
+                return !(transition.0 == SpecialStates::StateStart.value());
             }
             None => {
                 return true;
@@ -74,11 +73,20 @@ impl FilterGenerate {
     }
 
     /// Checks whether the start state of the transition function
-    /// will move to the right and enter a state that will be self looping.
-    fn filter_moves_right_loop(transition_function: &TransitionFunction) -> bool {
+    /// will move into a state that will be self looping.
+    /// 
+    /// In order to move into a state that will be self looping,
+    /// it needs to keep its direction, as follows:
+    /// 
+    /// - `start_state` -- RIGHT --> `self looping state` to RIGHT
+    /// - `start_state` -- LEFT --> `self looping state` to LEFT
+    fn filter_moves_into_loop(transition_function: &TransitionFunction) -> bool {
         let start_state_key: &(u8, u8) = &(SpecialStates::StateStart.value(), 0);
         let start_state_value: Option<&(u8, u8, Direction)> =
             transition_function.transitions.get(start_state_key);
+        // the direction in which the tape head
+        // will be moving
+        let start_state_direction: Direction;
 
         let next_state_key: (u8, u8);
 
@@ -86,6 +94,7 @@ impl FilterGenerate {
         // the starting state exists
         match start_state_value {
             Some(transition) => {
+                start_state_direction = transition.2;
                 next_state_key = (transition.0, 0);
             }
             None => {
@@ -96,10 +105,13 @@ impl FilterGenerate {
         let next_state_value: Option<&(u8, u8, Direction)> =
             transition_function.transitions.get(&next_state_key);
 
-        // check if the following state will self loop
+        // check if the following state will self loop,
+        // by keeping moving in the same direction and staying
+        // in the same state
         match next_state_value {
             Some(transition) => {
-                return !(transition.0 == next_state_key.0 && transition.2 == Direction::RIGHT);
+                return !(transition.0 == next_state_key.0
+                    && transition.2 == start_state_direction);
             }
             None => {
                 return true;
@@ -126,7 +138,7 @@ mod tests {
         });
 
         assert_eq!(
-            FilterGenerate::filter_start_state_moves_right_loop(&transition_function),
+            FilterGenerate::filter_start_state_moves_into_loop(&transition_function),
             false
         );
     }
@@ -193,7 +205,7 @@ mod tests {
             direction: Direction::RIGHT,
         });
 
-        let filter_result = FilterGenerate::filter_moves_right_loop(&transition_function);
+        let filter_result = FilterGenerate::filter_moves_into_loop(&transition_function);
         assert_eq!(filter_result, false);
     }
 }

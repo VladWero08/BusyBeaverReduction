@@ -8,8 +8,8 @@ mod turing_machine;
 
 use crate::logger::logger::load_logger;
 use crate::mediator::mediator::Mediator;
-use dotenv::dotenv;
 
+use dotenv::dotenv;
 
 #[tokio::main]
 async fn main() {

@@ -1,8 +1,8 @@
 use rayon;
 use tokio::sync::mpsc::Sender;
 
-use log::{info, error};
 use crate::turing_machine::turing_machine::TuringMachine;
+use log::{error, info};
 
 pub struct TuringMachineRunner {
     pub tx_turing_machines: Option<Sender<TuringMachine>>,
@@ -52,10 +52,10 @@ impl TuringMachineRunner {
                 // in the database
                 Ok(turing_machine) => {
                     let _ = turing_machine_channel.send(turing_machine).await;
-                } 
+                }
                 // otherwise, log the error
-                Err(e) => { 
-                    error!("While receving turing machine from rayon runtime {}", e); 
+                Err(e) => {
+                    error!("While receving turing machine from rayon runtime {}", e);
                 }
             };
         }

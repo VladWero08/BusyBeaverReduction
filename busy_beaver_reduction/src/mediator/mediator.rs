@@ -1,6 +1,6 @@
 use std::sync::mpsc::{channel, Receiver, Sender};
-use tokio;
 use std::thread;
+use tokio;
 
 use log::info;
 
@@ -146,7 +146,7 @@ impl Mediator {
         return false;
     }
 
-    /// After the Turing Machines were made from the 
+    /// After the Turing Machines were made from the
     /// generated Transition Functions, this function inserts
     /// them in the database in batches.
     async fn insert_turing_machines(&self) {
@@ -158,12 +158,16 @@ impl Mediator {
                 // insert them in batches
                 for batch in (0..self.turing_machines.len()).step_by(BATCH_SIZE) {
                     let mut batch_size = BATCH_SIZE;
-                    
+
                     if self.turing_machines.len() - batch < BATCH_SIZE {
                         batch_size = self.turing_machines.len() - batch;
-                    } 
+                    }
 
-                    database_manager.batch_insert_turing_machines(&self.turing_machines[batch..batch + batch_size]).await;
+                    database_manager
+                        .batch_insert_turing_machines(
+                            &self.turing_machines[batch..batch + batch_size],
+                        )
+                        .await;
 
                     // log after each 10 batch insertion
                     if batch % 1000 == 0 {
@@ -172,7 +176,7 @@ impl Mediator {
                 }
 
                 info!("Inserted all Turing Machines in the database!");
-            } 
+            }
             None => {}
         }
     }
