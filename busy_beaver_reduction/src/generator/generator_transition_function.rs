@@ -71,6 +71,12 @@ impl GeneratorTransitionFunction {
             .collect::<Vec<_>>()
             .join(", ");
 
+        let total_possible_transitions = self.states.len()
+            * ALPHABET.len()
+            * self.states_final.len()
+            * ALPHABET.len()
+            * DIRECTIONS.len();
+
         info!(
             "Generating all transitions with {} states, on alphabet [{}].",
             self.states.len(),
@@ -80,17 +86,35 @@ impl GeneratorTransitionFunction {
         for &from_state in self.states.iter() {
             for &from_symbol in ALPHABET.iter() {
                 for &to_state in self.states_final.iter() {
-                    for &to_symbol in ALPHABET.iter() {
-                        for &direction in DIRECTIONS.iter() {
-                            let transition: Transition = Transition {
-                                from_state: from_state,
-                                from_symbol: from_symbol,
-                                to_state: to_state,
-                                to_symbol: to_symbol,
-                                direction: direction,
-                            };
+                    // it is necessary to only generate
+                    // one transition that goes into the halting state,
+                    // only to take into account when writing a 1
 
-                            self.all_transitions.push(transition);
+                    // this is a built in filter for generation,
+                    // that will create less transition functions
+                    if to_state == SpecialStates::StateHalt.value() {
+                        let transition = Transition {
+                            from_state: from_state,
+                            from_symbol: from_symbol,
+                            to_state: to_state,
+                            to_symbol: 1,
+                            direction: Direction::RIGHT,
+                        };
+
+                        self.all_transitions.push(transition);
+                    } else {
+                        for &to_symbol in ALPHABET.iter() {
+                            for &direction in DIRECTIONS.iter() {
+                                let transition: Transition = Transition {
+                                    from_state: from_state,
+                                    from_symbol: from_symbol,
+                                    to_state: to_state,
+                                    to_symbol: to_symbol,
+                                    direction: direction,
+                                };
+
+                                self.all_transitions.push(transition);
+                            }
                         }
                     }
                 }
@@ -100,6 +124,12 @@ impl GeneratorTransitionFunction {
         info!(
             "Generated a total of {} transitions.",
             self.all_transitions.len()
+        );
+
+        info!(
+            "Only {} out of {} possible transitions are useful.",
+            self.all_transitions.len(),
+            total_possible_transitions,
         );
     }
 

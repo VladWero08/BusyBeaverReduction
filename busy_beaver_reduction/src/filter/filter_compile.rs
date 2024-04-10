@@ -1,7 +1,10 @@
+use std::collections::HashMap;
+use std::ops::RangeInclusive;
 use std::sync::mpsc::Sender;
 use std::thread;
 
 use crate::delta::transition_function::TransitionFunction;
+use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
 /// Implements filter techniques for `TransitionFunction`s that
@@ -23,6 +26,8 @@ impl FilterCompile {
         thread::spawn(move || {
             transition_functions
                 .retain(|transition_function| Self::filter_all(transition_function) == true);
+
+            transition_functions = Self::filter_existing_templates(transition_functions);
 
             // send the filtered transition functions
             // through the channel
@@ -67,6 +72,10 @@ impl FilterCompile {
         }
 
         return false;
+    }
+
+    fn filter_existing_templates(transition_functions: Vec<TransitionFunction>) -> Vec<TransitionFunction>{
+        return transition_functions;
     }
 }
 
