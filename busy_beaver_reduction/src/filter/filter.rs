@@ -1,7 +1,5 @@
 use std::sync::mpsc::{Receiver, Sender};
 
-use log::info;
-
 use crate::delta::transition_function::TransitionFunction;
 use crate::filter::filter_compile::FilterCompile;
 

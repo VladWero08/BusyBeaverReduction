@@ -20,6 +20,22 @@ impl Transition {
         }
     }
 
+    pub fn new_params(
+        from_state: u8,
+        from_symbol: u8,
+        to_state: u8,
+        to_symbol: u8,
+        direction: Direction,
+    ) -> Self {
+        Transition {
+            from_state,
+            from_symbol,
+            to_state,
+            to_symbol,
+            direction,
+        }
+    }
+
     /// Returns the transition as a `Vec<u8>`;
     ///
     /// Used for encoding the transition as a `String`.
