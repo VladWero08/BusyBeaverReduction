@@ -37,7 +37,7 @@ impl FilterEscapees {
 
     /// Given the current state of a `TuringMachine`, verify if
     /// the tape increased in the last move on a transition such as:
-    /// `(q_n, 0) -> (q_n, 0, R)`.
+    /// `(q_n, 0) -> (q_n, 0, R/L)`.
     ///
     /// If it did, it means it will loop endlessly.
     pub fn filter_short_escapees(&mut self, turing_machine: &TuringMachine) -> bool {
@@ -62,8 +62,7 @@ impl FilterEscapees {
             Some(transition) => {
                 return !(turing_machine.current_state == transition.0
                     && turing_machine.tape[turing_machine.head_position] == transition.1
-                    && transition.1 == 0
-                    && transition.2 == Direction::RIGHT);
+                    && transition.1 == 0);
             }
             None => {
                 return true;
@@ -74,13 +73,63 @@ impl FilterEscapees {
 
 #[cfg(test)]
 mod tests {
+    use crate::{delta::{transition::Transition, transition_function::TransitionFunction}, turing_machine::{direction::Direction, turing_machine::TuringMachine}};
+
+    use super::FilterEscapees;
+
     #[test]
     fn filter_long_escapees() {
-        // TO DO
+        let mut transition_function: TransitionFunction = TransitionFunction::new(2, 2);
+        let mut filter_escapees: FilterEscapees = FilterEscapees::new();
+
+        transition_function.add_transition(Transition::new_params(0, 0, 1, 0, Direction::RIGHT));
+        transition_function.add_transition(Transition::new_params(0, 1, 1, 1, Direction::RIGHT));
+        transition_function.add_transition(Transition::new_params(1, 0, 0, 0, Direction::RIGHT));
+        transition_function.add_transition(Transition::new_params(1, 1, 1, 1, Direction::LEFT));
+
+        // create the turing machines based on the transition function
+        let mut turing_machine: TuringMachine = TuringMachine::new(transition_function);
+        let maximum_steps = 1000;
+
+        // execute the turing machine until it reaches the maximum
+        // number of steps OR it gets filtered out by the escapees filter
+        while turing_machine.steps < maximum_steps {
+            if filter_escapees.filter_long_escapees(&turing_machine) {
+                break;
+            }
+
+            turing_machine.make_transition();
+        }
+
+        assert_ne!(turing_machine.steps, maximum_steps);
     }
 
     #[test]
     fn filter_short_escapees() {
-        // TO DO
+        let mut transition_function: TransitionFunction = TransitionFunction::new(3, 2);
+        let mut filter_escapees: FilterEscapees = FilterEscapees::new();
+
+        transition_function.add_transition(Transition::new_params(0, 0, 1, 0, Direction::LEFT));
+        transition_function.add_transition(Transition::new_params(0, 1, 1, 1, Direction::RIGHT));
+        transition_function.add_transition(Transition::new_params(1, 0, 0, 0, Direction::LEFT));
+        transition_function.add_transition(Transition::new_params(1, 1, 1, 1, Direction::LEFT));
+        transition_function.add_transition(Transition::new_params(2, 0, 2, 0, Direction::LEFT));
+        transition_function.add_transition(Transition::new_params(2, 1, 1, 1, Direction::RIGHT));
+
+        // create the turing machines based on the transition function
+        let mut turing_machine: TuringMachine = TuringMachine::new(transition_function);
+        let maximum_steps = 1000;
+
+        // execute the turing machine until it reaches the maximum
+        // number of steps OR it gets filtered out by the escapees filter
+        while turing_machine.steps < maximum_steps {
+            if filter_escapees.filter_short_escapees(&turing_machine) {
+                break;
+            }
+
+            turing_machine.make_transition();
+        }
+
+        assert_ne!(turing_machine.steps, maximum_steps);
     }
 }
