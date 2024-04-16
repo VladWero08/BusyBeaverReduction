@@ -2,8 +2,6 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use std::time::{Duration, Instant};
 
-use log::info;
-
 use crate::delta::transition_function::TransitionFunction;
 use crate::filter::filter_runtime::FilterRuntime;
 use crate::turing_machine::direction::Direction;

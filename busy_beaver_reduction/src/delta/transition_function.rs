@@ -75,8 +75,6 @@ impl TransitionFunction {
 
 #[cfg(test)]
 mod tests {
-    use crate::delta::transition;
-
     use super::*;
 
     #[test]

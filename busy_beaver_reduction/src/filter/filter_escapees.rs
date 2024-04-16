@@ -74,8 +74,6 @@ impl FilterEscapees {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     #[test]
     fn filter_long_escapees() {
         // TO DO

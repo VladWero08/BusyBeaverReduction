@@ -40,17 +40,4 @@ impl Filter {
 
         let _ = std::mem::replace(&mut self.tx_filtered_functions, None);
     }
-
-    /// Filters the received transition functions and
-    /// send them back to the `Generator` that produced them.
-    fn send_filtered(&mut self, transition_functions: Vec<TransitionFunction>) {
-        match &self.tx_filtered_functions {
-            Some(sender) => {
-                let tx_filtered_functions_clone = sender.clone();
-                // filter the received tranisition functions
-                self.filter_compile.filter(transition_functions, tx_filtered_functions_clone);
-            }
-            None => {}
-        }
-    }
 }
