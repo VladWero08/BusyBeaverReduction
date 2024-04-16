@@ -7,7 +7,7 @@ use crate::filter::filter_runtime::FilterRuntime;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
-const MAX_STEPS_TO_RUN: i64 = 1_000_000;
+const MAX_STEPS_TO_RUN: i64 = 1_000;
 
 pub struct TuringMachine {
     pub transition_function: TransitionFunction,

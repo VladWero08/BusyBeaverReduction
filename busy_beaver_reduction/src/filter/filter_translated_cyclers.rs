@@ -3,6 +3,9 @@ use std::collections::HashMap;
 use crate::turing_machine::turing_machine::TuringMachine;
 
 pub struct FilterTranslatedCyclers {
+    // u8 -> state, 
+    // usize -> position on the tape
+    // i64 -> step of the Turing Machine
     history: HashMap<u8, (usize, i64)>,
     possible_cycler: HashMap<u8, (usize, i64)>,
 }
@@ -141,19 +144,23 @@ impl FilterTranslatedCyclers {
 
         // if the distances between appearences are not the same,
         // it means its not a translated cycler
-        if turing_machine.head_position - cycler_appearence.0
-            != cycler_appearence.0 - history_appearence.0
+        if ((turing_machine.head_position - cycler_appearence.0) as isize).abs()
+            != ((cycler_appearence.0 - history_appearence.0) as isize).abs()
         {
             return false;
         }
 
         let distance = turing_machine.head_position - cycler_appearence.0;
+        // if the cycler appearence is bigger than the history appearence, 
+        // it means that it could be a right translated cycler, 
+        // otherwise it is a left translated cycler
+        let direction: i8 = if history_appearence < cycler_appearence { 1 } else { -1 };
 
         for i in 0..distance {
             // index for interval (1st_appeareance, 2nd_appearence)
-            let first_interval_index = history_appearence.0 + i;
+            let first_interval_index = (history_appearence.0 as i8 + i as i8 * direction) as usize;
             // index for interval (2nd_appeareance, 3rd_appearence)
-            let second_interval_index = cycler_appearence.0 + i;
+            let second_interval_index = (cycler_appearence.0 as i8+ i as i8 * direction) as usize;
 
             // check if the tape matches in both intervals,
             // if it doesn't, it means its not a translated cycler
