@@ -1,39 +1,42 @@
 use std::collections::HashMap;
 use std::sync::mpsc::Sender;
-use std::thread;
 
 use regex::Regex;
 
 use crate::delta::transition_function::TransitionFunction;
-use crate::delta::{transition, transition_function};
 use crate::turing_machine::special_states::SpecialStates;
 
 /// Implements filter techniques for `TransitionFunction`s that
 /// have been `fully generated`, a.k.a their domain of definition
 /// is fully completed.
-pub struct FilterCompile {}
+pub struct FilterCompile {
+    pub turing_machines_templates: Vec<Vec<(Regex, u8, u8)>>
+}
 
 impl FilterCompile {
+    pub fn new() -> Self {
+        return FilterCompile {
+            turing_machines_templates: Vec::new()
+        };
+    }
+
     /// Creates a new thread were all the `TransitionFunction` from the `Vec`
     /// will be filtered.
     ///
     /// Returns the filtered `Vec`.
     pub fn filter(
+        &mut self,
         mut transition_functions: Vec<TransitionFunction>,
         tx: Sender<Vec<TransitionFunction>>,
     ) {
-        // create a new thread, move the transition functions into it
-        // and filter them all
-        thread::spawn(move || {
-            transition_functions
-                .retain(|transition_function| Self::filter_all(transition_function) == true);
+        transition_functions
+        .retain(|transition_function| Self::filter_all(transition_function) == true);
 
-            transition_functions = Self::filter_existing_templates(transition_functions);
+        // transition_functions = self.filter_existing_templates(transition_functions);
 
-            // send the filtered transition functions
-            // through the channel
-            tx.send(transition_functions).unwrap();
-        });
+        // send the filtered transition functions
+        // through the channel
+        tx.send(transition_functions).unwrap();    
     }
 
     /// Applies all filters of the `FilterCompile` struct to the provided
@@ -93,22 +96,21 @@ impl FilterCompile {
     /// If we interchange appearences of states `2` and `3` for transition
     /// function g, we get f.
     fn filter_existing_templates(
+        &mut self,
         mut transition_functions: Vec<TransitionFunction>,
     ) -> Vec<TransitionFunction> {
-        let mut turing_machines_templates: Vec<Vec<(Regex, u8, u8)>> = Vec::new();
         let mut transition_functions_to_remove: Vec<usize> = Vec::new();
 
         for index in 0..transition_functions.len() {
-            let filter = FilterCompile::filter_against_templates(
+            let filter = self.filter_against_templates(
                 &transition_functions[index],
-                &turing_machines_templates,
             );
 
             // if the filter was passed, it means it is a new configuration
             // of transition function, add it to the templates
             if filter == true {
                 let new_template = FilterCompile::retrieve_template(&transition_functions[index]);
-                turing_machines_templates.push(new_template);
+                self.turing_machines_templates.push(new_template);
             }
             // otheriwse, keep the index in a vector
             // in order to delete this transition function
@@ -128,10 +130,10 @@ impl FilterCompile {
     /// Check whether a transition function already has
     /// an equivalent template which behaves in the same way
     fn filter_against_templates(
+        &mut self,
         transition_function: &TransitionFunction,
-        turing_machines_templates: &Vec<Vec<(Regex, u8, u8)>>,
     ) -> bool {
-        for template in turing_machines_templates {
+        for template in self.turing_machines_templates.iter() {
             let mut template_matched: bool = true;
             let mut transition_function_encoded = transition_function.encode();
             // holds the mapping of the state of the template
@@ -141,7 +143,7 @@ impl FilterCompile {
             let mut states_mapping: HashMap<u8, u8> = HashMap::new();
 
             for transition_regex in template {
-                // if the current regex does not match the encoding,
+                // if the current regex  does not match the encoding,
                 // this template cannot be matched
                 if !transition_regex.0.is_match(&transition_function_encoded) {
                     template_matched = false;
@@ -311,8 +313,9 @@ mod tests {
             transition_function_03.clone(),
             transition_function_04.clone(),
         ];
+        let mut filter_compile = FilterCompile::new();
         let transition_functions_filtered =
-            FilterCompile::filter_existing_templates(transition_functions);
+            filter_compile.filter_existing_templates(transition_functions);
 
         assert_eq!(
             transition_functions_filtered.contains(&transition_function_01),

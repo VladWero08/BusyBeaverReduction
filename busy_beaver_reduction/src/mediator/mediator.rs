@@ -12,7 +12,7 @@ use crate::generator::generator::Generator;
 use crate::turing_machine::runner::TuringMachineRunner;
 use crate::turing_machine::turing_machine::TuringMachine;
 
-const BATCH_SIZE: usize = 100;
+const BATCH_SIZE: usize = 1000;
 
 pub struct Mediator {
     number_of_states: u8,
@@ -98,6 +98,8 @@ impl Mediator {
     /// the first instances of transition functions, use them
     /// to create instances of `TuringMachine`s.
     fn make_turing_machines(&mut self, transition_functions: Vec<TransitionFunction>) {
+        info!("Started creating Turing Machines based on transition functions generated...");
+        
         for transition_function in transition_functions {
             let turing_machine = TuringMachine::new(transition_function);
             self.turing_machines.push(turing_machine);
@@ -154,6 +156,8 @@ impl Mediator {
 
         match db_option {
             Some(mut database_manager) => {
+                info!("Started inserting the Turing Machines in the database...");
+
                 // iterate through the turing machines and
                 // insert them in batches
                 for batch in (0..self.turing_machines.len()).step_by(BATCH_SIZE) {
@@ -170,8 +174,8 @@ impl Mediator {
                         .await;
 
                     // log after each 10 batch insertion
-                    if batch % 1000 == 0 {
-                        info!("Inserted {}th batch of 100 Turing Machines...", batch / 100);
+                    if batch % 50000 == 0 {
+                        info!("Inserted the {}th batch of 1000 Turing Machines...", batch / 1000);
                     }
                 }
 
