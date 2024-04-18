@@ -1,4 +1,3 @@
-use crate::turing_machine::direction::Direction;
 use crate::turing_machine::turing_machine::TuringMachine;
 
 pub struct FilterEscapees {
@@ -73,7 +72,10 @@ impl FilterEscapees {
 
 #[cfg(test)]
 mod tests {
-    use crate::{delta::{transition::Transition, transition_function::TransitionFunction}, turing_machine::{direction::Direction, turing_machine::TuringMachine}};
+    use crate::delta::transition::Transition;
+    use crate::delta::transition_function::TransitionFunction;
+    use crate::turing_machine::direction::Direction;
+    use crate::turing_machine::turing_machine::TuringMachine;
 
     use super::FilterEscapees;
 
@@ -94,7 +96,7 @@ mod tests {
         // execute the turing machine until it reaches the maximum
         // number of steps OR it gets filtered out by the escapees filter
         while turing_machine.steps < maximum_steps {
-            if filter_escapees.filter_long_escapees(&turing_machine) {
+            if !(filter_escapees.filter_long_escapees(&turing_machine)) {
                 break;
             }
 
@@ -109,11 +111,11 @@ mod tests {
         let mut transition_function: TransitionFunction = TransitionFunction::new(3, 2);
         let mut filter_escapees: FilterEscapees = FilterEscapees::new();
 
-        transition_function.add_transition(Transition::new_params(0, 0, 1, 0, Direction::LEFT));
-        transition_function.add_transition(Transition::new_params(0, 1, 1, 1, Direction::RIGHT));
-        transition_function.add_transition(Transition::new_params(1, 0, 0, 0, Direction::LEFT));
+        transition_function.add_transition(Transition::new_params(0, 0, 1, 1, Direction::LEFT));
+        transition_function.add_transition(Transition::new_params(0, 1, 2, 1, Direction::RIGHT));
+        transition_function.add_transition(Transition::new_params(1, 0, 0, 0, Direction::RIGHT));
         transition_function.add_transition(Transition::new_params(1, 1, 1, 1, Direction::LEFT));
-        transition_function.add_transition(Transition::new_params(2, 0, 2, 0, Direction::LEFT));
+        transition_function.add_transition(Transition::new_params(2, 0, 2, 0, Direction::RIGHT));
         transition_function.add_transition(Transition::new_params(2, 1, 1, 1, Direction::RIGHT));
 
         // create the turing machines based on the transition function
@@ -123,7 +125,7 @@ mod tests {
         // execute the turing machine until it reaches the maximum
         // number of steps OR it gets filtered out by the escapees filter
         while turing_machine.steps < maximum_steps {
-            if filter_escapees.filter_short_escapees(&turing_machine) {
+            if !(filter_escapees.filter_short_escapees(&turing_machine)) {
                 break;
             }
 
