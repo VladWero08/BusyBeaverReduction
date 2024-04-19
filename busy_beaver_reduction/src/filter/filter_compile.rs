@@ -10,13 +10,13 @@ use crate::turing_machine::special_states::SpecialStates;
 /// have been `fully generated`, a.k.a their domain of definition
 /// is fully completed.
 pub struct FilterCompile {
-    pub turing_machines_templates: Vec<Vec<(Regex, u8, u8)>>
+    pub turing_machines_templates: Vec<Vec<(Regex, u8, u8)>>,
 }
 
 impl FilterCompile {
     pub fn new() -> Self {
         return FilterCompile {
-            turing_machines_templates: Vec::new()
+            turing_machines_templates: Vec::new(),
         };
     }
 
@@ -30,13 +30,13 @@ impl FilterCompile {
         tx: Sender<Vec<TransitionFunction>>,
     ) {
         transition_functions
-        .retain(|transition_function| Self::filter_all(transition_function) == true);
+            .retain(|transition_function| Self::filter_all(transition_function) == true);
 
         // transition_functions = self.filter_existing_templates(transition_functions);
 
         // send the filtered transition functions
         // through the channel
-        tx.send(transition_functions).unwrap();    
+        tx.send(transition_functions).unwrap();
     }
 
     /// Applies all filters of the `FilterCompile` struct to the provided
@@ -102,9 +102,7 @@ impl FilterCompile {
         let mut transition_functions_to_remove: Vec<usize> = Vec::new();
 
         for index in 0..transition_functions.len() {
-            let filter = self.filter_against_templates(
-                &transition_functions[index],
-            );
+            let filter = self.filter_against_templates(&transition_functions[index]);
 
             // if the filter was passed, it means it is a new configuration
             // of transition function, add it to the templates
@@ -129,10 +127,7 @@ impl FilterCompile {
 
     /// Check whether a transition function already has
     /// an equivalent template which behaves in the same way
-    fn filter_against_templates(
-        &mut self,
-        transition_function: &TransitionFunction,
-    ) -> bool {
+    fn filter_against_templates(&mut self, transition_function: &TransitionFunction) -> bool {
         for template in self.turing_machines_templates.iter() {
             let mut template_matched: bool = true;
             let mut transition_function_encoded = transition_function.encode();

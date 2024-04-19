@@ -6,7 +6,7 @@ use crate::filter::filter_compile::FilterCompile;
 pub struct Filter {
     pub tx_filtered_functions: Option<Sender<Vec<TransitionFunction>>>,
     pub rx_unfiltered_functions: Receiver<Vec<TransitionFunction>>,
-    pub filter_compile: FilterCompile
+    pub filter_compile: FilterCompile,
 }
 
 impl Filter {
@@ -17,7 +17,7 @@ impl Filter {
         Filter {
             tx_filtered_functions: Some(tx_filtered_functions),
             rx_unfiltered_functions: rx_unfiltered_functions,
-            filter_compile: FilterCompile::new()
+            filter_compile: FilterCompile::new(),
         }
     }
 
@@ -32,7 +32,8 @@ impl Filter {
                 Some(sender) => {
                     let tx_filtered_functions_clone = sender.clone();
                     // filter the received tranisition functions
-                    self.filter_compile.filter(transition_functions, tx_filtered_functions_clone);
+                    self.filter_compile
+                        .filter(transition_functions, tx_filtered_functions_clone);
                 }
                 None => {}
             }

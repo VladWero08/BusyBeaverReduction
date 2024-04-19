@@ -99,7 +99,7 @@ impl Mediator {
     /// to create instances of `TuringMachine`s.
     fn make_turing_machines(&mut self, transition_functions: Vec<TransitionFunction>) {
         info!("Started creating Turing Machines based on transition functions generated...");
-        
+
         for transition_function in transition_functions {
             let turing_machine = TuringMachine::new(transition_function);
             self.turing_machines.push(turing_machine);
@@ -175,7 +175,10 @@ impl Mediator {
 
                     // log after each 10 batch insertion
                     if batch % 50000 == 0 {
-                        info!("Inserted the {}th batch of 1000 Turing Machines...", batch / 1000);
+                        info!(
+                            "Inserted the {}th batch of 1000 Turing Machines...",
+                            batch / 1000
+                        );
                     }
                 }
 
