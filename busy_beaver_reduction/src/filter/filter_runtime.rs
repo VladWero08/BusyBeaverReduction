@@ -36,7 +36,7 @@ impl FilterRuntime {
     pub fn filter_all(&mut self, turing_machine: &TuringMachine) -> bool {
         return self.filter_escapees.filter_long_escapees(turing_machine)
             && self.filter_escapees.filter_short_escapees(turing_machine)
-            && self.filter_cyclers.filter(turing_machine)
-            && self.filter_translated_cyclers.filter(turing_machine);
+            && self.filter_cyclers.filter(turing_machine);
+            // && self.filter_translated_cyclers.filter(turing_machine);
     }
 }

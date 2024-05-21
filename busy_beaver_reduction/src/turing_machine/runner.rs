@@ -1,8 +1,12 @@
 use rayon;
+use std::sync::Arc;
+use tokio::sync::{Semaphore, SemaphorePermit};
 use tokio::sync::mpsc::Sender;
 
 use crate::turing_machine::turing_machine::TuringMachine;
 use log::{error, info};
+
+const MAXIMUM_THREADS: usize = 10;
 
 pub struct TuringMachineRunner {
     pub tx_turing_machines: Option<Sender<TuringMachine>>,
@@ -30,34 +34,52 @@ impl TuringMachineRunner {
             "Started running turing machine. {} total machines to run...",
             turing_machines.len()
         );
+ 
+        let semaphore = Arc::new(Semaphore::new(MAXIMUM_THREADS));
+        let mut turing_machine_executions: Vec<tokio::task::JoinHandle<()>> = vec![];
 
         for mut turing_machine in turing_machines {
             let turing_machine_channel: Sender<TuringMachine> =
                 self.tx_turing_machines.clone().unwrap();
+            let semaphore = semaphore.clone();
 
-            // build the turing machine based on the transition
-            // function received, than execute it
-            let (send, recv) = tokio::sync::oneshot::channel();
 
-            // create a rayon thread to execute the CPU bound task,
-            // the task of executing the turing machine
-            rayon::spawn(move || {
-                turing_machine.execute();
-                let _ = send.send(turing_machine);
+            let turing_machine_execution = tokio::spawn(async move {
+                // wait for the permission to execute the Turing machine
+                let permit: SemaphorePermit = semaphore.acquire().await.unwrap();
+
+                // build the turing machine based on the transition
+                // function received, than execute it
+                let (send, recv) = tokio::sync::oneshot::channel();
+
+                // create a rayon thread to execute the CPU bound task,
+                // the task of executing the turing machine
+                rayon::spawn(move || {
+                    turing_machine.execute();
+                    let _ = send.send(turing_machine);
+                });
+
+                let _ = match recv.await {
+                    // if no error occured, send the turing machine that
+                    // was executed to the database manager runner, to update its entry
+                    // in the database
+                    Ok(turing_machine) => {
+                        let _ = turing_machine_channel.send(turing_machine).await;
+                    }
+                    // otherwise, log the error
+                    Err(e) => {
+                        error!("While receving turing machine from rayon runtime {}", e);
+                    }
+                };
+
+                drop(permit);
             });
 
-            let _ = match recv.await {
-                // if no error occured, send the turing machine that
-                // was executed to the database manager runner, to update its entry
-                // in the database
-                Ok(turing_machine) => {
-                    let _ = turing_machine_channel.send(turing_machine).await;
-                }
-                // otherwise, log the error
-                Err(e) => {
-                    error!("While receving turing machine from rayon runtime {}", e);
-                }
-            };
+            turing_machine_executions.push(turing_machine_execution);
+        }
+
+        for turing_machine_execution in turing_machine_executions {
+            let _ = turing_machine_execution.await.unwrap();
         }
 
         info!("Finished running all the turing machines.");
