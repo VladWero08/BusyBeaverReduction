@@ -20,12 +20,12 @@ impl FilterTranslatedCyclers {
     /// Given the current state of a `TuringMachine`, applies the following filter:
     ///
     /// 1. When the machine's tape reaches a new cell in a certain state
-    /// for the `first time`: add the  `(current_state, direction)` = `(tape, steps)`
+    /// for the `first time`: add the  `(current_state, direction)` = `(tape)`
     /// entry in the history hashmap.
     ///
     /// 2. When the machine's tape reaches a new cell in the same state
     /// for the `second time`, it means that a translated cycle could have occurred
-    /// between the first and the second appearance": add the `(current_state, direction)` = `(tape, steps)`
+    /// between the first and the second appearance": add the `(current_state, direction)` = `(tape)`
     /// entry in the possible cyclers hashmap
     ///
     /// 3. When the machine's tape reaches a new cell in the same state

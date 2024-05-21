@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS `turing_machines` (
     `number_of_symbols` tinyint NOT NULL,
     `halted` tinyint NOT NULL,
     `steps` bigint NOT NULL,
-    `score` int NOT NULL,
+    `score` bigint NOT NULL,
     `time_to_run` int NOT NULL,
     
     PRIMARY KEY (`id`)
