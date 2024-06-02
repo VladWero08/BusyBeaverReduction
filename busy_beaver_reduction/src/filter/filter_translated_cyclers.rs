@@ -127,8 +127,8 @@ impl FilterTranslatedCyclers {
                 for i in 0..history_tape.len() {
                     // check if the tape matches in both intervals,
                     // if it doesn't, it means its not a translated cycler
-                    if turing_machine.tape[(current_tape_length + (i as u64)) as usize]
-                        != history_tape[(history_tape_length + (i as u64)) as usize]
+                    if turing_machine.tape[i]
+                        != history_tape[i]
                     {
                         return false;
                     }

@@ -173,11 +173,12 @@ impl Mediator {
                         )
                         .await;
 
-                    // log after each 10 batch insertion
+                    // log after each 50_000 turing machine insertions
                     if batch % 50000 == 0 {
                         info!(
-                            "Inserted the {}th batch of 1000 Turing Machines...",
-                            batch / 1000
+                            "Inserted the {}th batch of {} Turing Machines...",
+                            batch / BATCH_SIZE,
+                            BATCH_SIZE
                         );
                     }
                 }

@@ -6,7 +6,7 @@ use log::info;
 use crate::delta::transition_function::TransitionFunction;
 use crate::generator::generator_transition_function::GeneratorTransitionFunction;
 
-const BATCH_SIZE: usize = 100;
+const BATCH_SIZE: usize = 1500;
 
 pub struct Generator {
     pub number_of_states: u8,
