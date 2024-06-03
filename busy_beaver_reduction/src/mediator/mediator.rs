@@ -17,6 +17,7 @@ const BATCH_SIZE: usize = 1000;
 pub struct Mediator {
     number_of_states: u8,
     turing_machines: Vec<TuringMachine>,
+    loaded: bool
 }
 
 impl Mediator {
@@ -24,8 +25,53 @@ impl Mediator {
         Mediator {
             number_of_states: number_of_states,
             turing_machines: vec![],
+            loaded: false,
         }
     }
+
+    /// Tries to retrieve any turing machine from the database
+    /// that has `number_of_states` states.
+    ///
+    /// If any exist, set the turing machines of the
+    /// mediator to be equal to the ones extracted from
+    /// the database.
+    ///
+    /// Used when trying to generate turing machines, in order
+    /// to skip some computations.
+    pub async fn load_turing_machines(&mut self) {
+        let db_option = DatabaseManager::new().await;
+
+        match db_option {
+            // if the database manager was succesfully created,
+            // try to select all the turing machines with the
+            // desired number of states
+            Some(mut database_manager) => {
+                let tm_option = database_manager
+                    .select_turing_machines_to_run(self.number_of_states, 2)
+                    .await;
+
+                match tm_option {
+                    // if the select did not fail, check if
+                    // any such Turing Machines exist in the database
+                    Some(turing_machines) => {
+                        // if they do, it means the generation was already done,
+                        // so save the turing machines directly
+                        if turing_machines.len() > 0 {
+                            self.turing_machines = turing_machines;
+                        }
+
+                        self.loaded = self.turing_machines.len() > 0;
+                    }
+                    None => {}
+                }
+            }
+            None => {}
+        }
+
+        self.loaded = false;
+    }
+
+    pub fn get_loaded(&self) -> bool { return self.loaded; }
 
     /// Checks if the generation already took place, aka
     /// there are turing machines with the desired number of states
@@ -39,15 +85,6 @@ impl Mediator {
     /// will be generating unfiltered transition functions and
     /// will wait to receive the filtered from the `Filter`.
     pub async fn generate_and_filter(&mut self) {
-        // try loading turing machines from the database
-        if self.load_turing_machines().await == true {
-            info!(
-                "Loaded turing machines from the database, a total of {}.",
-                self.turing_machines.len()
-            );
-            return;
-        }
-
         // mpsc channel used for sending unfiltered transition functions
         // from the generator to the filter
         let (tx_unfiltered_functions, rx_unfiltered_functions): (
@@ -91,7 +128,6 @@ impl Mediator {
         let transition_functions_generated = generator_handle.join().unwrap();
 
         self.make_turing_machines(transition_functions_generated);
-        self.insert_turing_machines().await;
     }
 
     /// After the generator and filter finished to create
@@ -106,87 +142,37 @@ impl Mediator {
         }
     }
 
-    /// Tries to retrieve any turing machine from the database
-    /// that has `number_of_states` states.
+    /// Creates a new thread that will build `TuringMachine`s based
+    /// on the transition functions generated & filtered.
+    /// Afterwards, it will execute them all and send them to the `DatabaseManagerRunner`.
     ///
-    /// If any exist, set the turing machines of the
-    /// mediator to be equal to the ones extracted from
-    /// the database.
-    ///
-    /// Used when trying to generate turing machines, in order
-    /// to skip some computations.
-    async fn load_turing_machines(&mut self) -> bool {
-        let db_option = DatabaseManager::new().await;
+    /// Creates a new thread that will wait for executed `TuringMachine`s;
+    /// after receiving them, it will update their entry in the database.
+    pub async fn run_and_update(self) {
+        // mpsc channel used for sending terminated turing machines
+        // from the turing machine runner to the database
+        let (tx_turing_machine, rx_turing_machine): (
+            tokio::sync::mpsc::Sender<TuringMachine>,
+            tokio::sync::mpsc::Receiver<TuringMachine>,
+        ) = tokio::sync::mpsc::channel(1000);
 
-        match db_option {
-            // if the database manager was succesfully created,
-            // try to select all the turing machines with the
-            // desired number of states
-            Some(mut database_manager) => {
-                let tm_option = database_manager
-                    .select_turing_machines_to_run(self.number_of_states, 2)
-                    .await;
+        let database_handler;
 
-                match tm_option {
-                    // if the select did not fail, check if
-                    // any such Turing Machines exist in the database
-                    Some(turing_machines) => {
-                        // if they do, it means the generation was already done,
-                        // so save the turing machines directly
-                        if turing_machines.len() > 0 {
-                            self.turing_machines = turing_machines;
-                        }
+        // creates a new thread for the database insertions
+        database_handler = tokio::spawn(async {
+            let mut database_manager_runner = DatabaseManagerRunner::new(rx_turing_machine);
+            database_manager_runner.receive_and_update_turing_machines().await;
+        });
 
-                        return self.turing_machines.len() > 0;
-                    }
-                    None => {}
-                }
-            }
-            None => {}
-        }
+        // creates a new thread to run turing machines
+        let tm_runner_handler = tokio::spawn(async {
+            let mut tm_runner = TuringMachineRunner::new(tx_turing_machine);
+            tm_runner.run(self.turing_machines).await;
+        });
 
-        return false;
-    }
-
-    /// After the Turing Machines were made from the
-    /// generated Transition Functions, this function inserts
-    /// them in the database in batches.
-    async fn insert_turing_machines(&self) {
-        let db_option = DatabaseManager::new().await;
-
-        match db_option {
-            Some(mut database_manager) => {
-                info!("Started inserting the Turing Machines in the database...");
-
-                // iterate through the turing machines and
-                // insert them in batches
-                for batch in (0..self.turing_machines.len()).step_by(BATCH_SIZE) {
-                    let mut batch_size = BATCH_SIZE;
-
-                    if self.turing_machines.len() - batch < BATCH_SIZE {
-                        batch_size = self.turing_machines.len() - batch;
-                    }
-
-                    database_manager
-                        .batch_insert_turing_machines(
-                            &self.turing_machines[batch..batch + batch_size],
-                        )
-                        .await;
-
-                    // log after each 50_000 turing machine insertions
-                    if batch % 50000 == 0 {
-                        info!(
-                            "Inserted the {}th batch of {} Turing Machines...",
-                            batch / BATCH_SIZE,
-                            BATCH_SIZE
-                        );
-                    }
-                }
-
-                info!("Inserted all Turing Machines in the database!");
-            }
-            None => {}
-        }
+        // wait for both threads to finish
+        let _ = database_handler.await;
+        let _ = tm_runner_handler.await;
     }
 
     /// Creates a new thread that will build `TuringMachine`s based
@@ -194,19 +180,21 @@ impl Mediator {
     /// Afterwards, it will execute them all and send them to the `DatabaseManagerRunner`.
     ///
     /// Creates a new thread that will wait for executed `TuringMachine`s;
-    /// after receiving them, it will insert them in the database.
+    /// after receiving them, it will bulk insert them in the database.
     pub async fn run_and_insert(self) {
         // mpsc channel used for sending terminated turing machines
         // from the turing machine runner to the database
         let (tx_turing_machine, rx_turing_machine): (
             tokio::sync::mpsc::Sender<TuringMachine>,
             tokio::sync::mpsc::Receiver<TuringMachine>,
-        ) = tokio::sync::mpsc::channel(100);
+        ) = tokio::sync::mpsc::channel(1000);
+
+        let database_handler;
 
         // creates a new thread for the database insertions
-        let database_handler = tokio::spawn(async {
+        database_handler = tokio::spawn(async {
             let mut database_manager_runner = DatabaseManagerRunner::new(rx_turing_machine);
-            database_manager_runner.receive_turing_machines().await;
+            database_manager_runner.receive_and_insert_turing_machines().await;
         });
 
         // creates a new thread to run turing machines

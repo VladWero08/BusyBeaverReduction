@@ -1,8 +1,10 @@
 use rayon;
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::{Semaphore, SemaphorePermit};
 use tokio::sync::mpsc::Sender;
 
+use crate::turing_machine;
 use crate::turing_machine::turing_machine::TuringMachine;
 use log::{error, info};
 
@@ -34,6 +36,33 @@ impl TuringMachineRunner {
             "Started running turing machine. {} total machines to run...",
             turing_machines.len()
         );
+        
+        let pool = rayon::ThreadPoolBuilder::new().num_threads(16).build().unwrap();
+        let mut finished_turing_machines: Vec<TuringMachine> = Vec::new();
+
+        pool.install(|| {
+            for mut turing_machine in turing_machines {
+                turing_machine.execute();
+                finished_turing_machines.push(turing_machine);
+            }
+        });
+
+        for turing_machine  in finished_turing_machines {
+            let turing_machine_channel: Sender<TuringMachine> = self.tx_turing_machines.clone().unwrap();
+            let _ = turing_machine_channel.send(turing_machine).await;
+        }
+
+        // after the running of every TuringMachine,
+        // drop the communication channel with the database
+        let _ = std::mem::replace(&mut self.tx_turing_machines, None);
+        info!("Dropped communication channel betwenn Turing Machine and Database Manager runners.");
+    }
+
+    pub async fn run_old(&mut self, turing_machines: Vec<TuringMachine>) {
+        info!(
+            "Started running turing machine. {} total machines to run...",
+            turing_machines.len()
+        );
  
         let semaphore = Arc::new(Semaphore::new(MAXIMUM_THREADS));
         let mut turing_machine_executions: Vec<tokio::task::JoinHandle<()>> = vec![];
@@ -42,7 +71,6 @@ impl TuringMachineRunner {
             let turing_machine_channel: Sender<TuringMachine> =
                 self.tx_turing_machines.clone().unwrap();
             let semaphore = semaphore.clone();
-
 
             let turing_machine_execution = tokio::spawn(async move {
                 // wait for the permission to execute the Turing machine
