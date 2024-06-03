@@ -1,10 +1,8 @@
 use rayon;
 use std::sync::Arc;
-use std::time::Instant;
 use tokio::sync::{Semaphore, SemaphorePermit};
 use tokio::sync::mpsc::Sender;
 
-use crate::turing_machine;
 use crate::turing_machine::turing_machine::TuringMachine;
 use log::{error, info};
 
@@ -37,7 +35,7 @@ impl TuringMachineRunner {
             turing_machines.len()
         );
         
-        let pool = rayon::ThreadPoolBuilder::new().num_threads(16).build().unwrap();
+        let pool = rayon::ThreadPoolBuilder::new().num_threads(MAXIMUM_THREADS).build().unwrap();
         let mut finished_turing_machines: Vec<TuringMachine> = Vec::new();
 
         pool.install(|| {
