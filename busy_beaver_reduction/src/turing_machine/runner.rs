@@ -7,7 +7,7 @@ use tokio::sync::{Semaphore, SemaphorePermit};
 use crate::turing_machine::turing_machine::TuringMachine;
 use log::{error, info};
 
-const MAXIMUM_THREADS: usize = 16;
+const MAXIMUM_THREADS: usize = 8;
 
 pub struct TuringMachineRunner {
     pub tx_turing_machines: Option<Sender<TuringMachine>>,
@@ -59,6 +59,8 @@ impl TuringMachineRunner {
         info!("Dropped communication channel betwenn Turing Machine and Database Manager runners.");
     }
 
+    /// Older version used to run all the Turing machines. It is deprecated
+    /// because it created a big overhead with all the threads created.
     pub async fn run_old(&mut self, turing_machines: Vec<TuringMachine>) {
         info!(
             "Started running turing machine. {} total machines to run...",

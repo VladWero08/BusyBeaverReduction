@@ -177,19 +177,24 @@ impl FilterGenerate {
     /// by each individual filter.
     pub fn display_filtering_results(&self) {
         info!(
-            "Filtered a total of halting skippers: {}",
-            self.halting_skippers
+            "Filtered a total of halting skippers: {:.2}%",
+            self.halting_skippers as f64 * 100.0 / self.turing_machines_size as f64
         );
 
         info!(
-            "Filtered a total of start state loopers: {}",
-            self.start_state_loopers
+            "Filtered a total of start state loopers: {:.2}%",
+            self.start_state_loopers as f64 * 100.0 / self.turing_machines_size as f64
         );
+
         info!(
-            "Filtered a total of neighbour state loopers: {}",
-            self.neighbour_state_loopers
+            "Filtered a total of neighbour state loopers: {:.2}%",
+            self.neighbour_state_loopers as f64 * 100.0 / self.turing_machines_size as f64
         );
-        info!("Filtered a total of naive beavers: {}", self.naive_beavers);
+
+        info!(
+            "Filtered a total of naive beavers: {:.2}%", 
+            self.naive_beavers as f64 * 100.0 / self.turing_machines_size as f64
+        );
     }
 }
 
