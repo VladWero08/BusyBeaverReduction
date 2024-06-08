@@ -1,12 +1,13 @@
 use rayon;
+use rayon::iter::{IntoParallelRefMutIterator, ParallelIterator};
 use std::sync::Arc;
-use tokio::sync::{Semaphore, SemaphorePermit};
 use tokio::sync::mpsc::Sender;
+use tokio::sync::{Semaphore, SemaphorePermit};
 
 use crate::turing_machine::turing_machine::TuringMachine;
 use log::{error, info};
 
-const MAXIMUM_THREADS: usize = 10;
+const MAXIMUM_THREADS: usize = 16;
 
 pub struct TuringMachineRunner {
     pub tx_turing_machines: Option<Sender<TuringMachine>>,
@@ -29,24 +30,26 @@ impl TuringMachineRunner {
     ///
     /// Consumer on the other side of the mpsc channel will insert the turing
     /// machines in the database.
-    pub async fn run(&mut self, turing_machines: Vec<TuringMachine>) {
+    pub async fn run(&mut self, mut turing_machines: Vec<TuringMachine>) {
         info!(
             "Started running turing machine. {} total machines to run...",
             turing_machines.len()
         );
-        
-        let pool = rayon::ThreadPoolBuilder::new().num_threads(MAXIMUM_THREADS).build().unwrap();
-        let mut finished_turing_machines: Vec<TuringMachine> = Vec::new();
+
+        let pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(MAXIMUM_THREADS)
+            .build()
+            .unwrap();
 
         pool.install(|| {
-            for mut turing_machine in turing_machines {
+            turing_machines.par_iter_mut().for_each(|turing_machine| {
                 turing_machine.execute();
-                finished_turing_machines.push(turing_machine);
-            }
+            });
         });
 
-        for turing_machine  in finished_turing_machines {
-            let turing_machine_channel: Sender<TuringMachine> = self.tx_turing_machines.clone().unwrap();
+        for turing_machine in turing_machines {
+            let turing_machine_channel: Sender<TuringMachine> =
+                self.tx_turing_machines.clone().unwrap();
             let _ = turing_machine_channel.send(turing_machine).await;
         }
 
@@ -61,7 +64,7 @@ impl TuringMachineRunner {
             "Started running turing machine. {} total machines to run...",
             turing_machines.len()
         );
- 
+
         let semaphore = Arc::new(Semaphore::new(MAXIMUM_THREADS));
         let mut turing_machine_executions: Vec<tokio::task::JoinHandle<()>> = vec![];
 

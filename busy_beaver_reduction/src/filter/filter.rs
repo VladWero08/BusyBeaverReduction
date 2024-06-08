@@ -2,6 +2,10 @@ use std::sync::mpsc::{Receiver, Sender};
 
 use crate::delta::transition_function::TransitionFunction;
 use crate::filter::filter_compile::FilterCompile;
+use crate::turing_machine::direction::Direction;
+
+const DIRECTIONS: [Direction; 2] = [Direction::LEFT, Direction::RIGHT];
+const ALPHABET: [u8; 2] = [0, 1];
 
 pub struct Filter {
     pub tx_filtered_functions: Option<Sender<Vec<TransitionFunction>>>,
@@ -13,11 +17,16 @@ impl Filter {
     pub fn new(
         tx_filtered_functions: Sender<Vec<TransitionFunction>>,
         rx_unfiltered_functions: Receiver<Vec<TransitionFunction>>,
+        number_of_states: u8,
     ) -> Self {
         Filter {
             tx_filtered_functions: Some(tx_filtered_functions),
             rx_unfiltered_functions: rx_unfiltered_functions,
-            filter_compile: FilterCompile::new(),
+            filter_compile: FilterCompile::new(
+                number_of_states as usize,
+                ALPHABET.len(),
+                DIRECTIONS.len()
+            )
         }
     }
 
@@ -38,6 +47,8 @@ impl Filter {
                 None => {}
             }
         }
+
+        self.filter_compile.display_filtering_results();
 
         let _ = std::mem::replace(&mut self.tx_filtered_functions, None);
     }

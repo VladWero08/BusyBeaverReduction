@@ -34,8 +34,8 @@ impl DatabaseManagerRunner {
 
     /// Listens to the communication channel, which has the TuringMachineRunner
     /// on the other side, and for each turing machine received, add it to a
-    /// vector of Turing machines. 
-    /// 
+    /// vector of Turing machines.
+    ///
     /// Once the desired batch size is reached, bulks insert them in the database.
     pub async fn receive_and_insert_turing_machines(&mut self) {
         let mut database = match DatabaseManager::new().await {
@@ -50,7 +50,9 @@ impl DatabaseManagerRunner {
             turing_machines.push(turing_machine);
 
             if turing_machines.len() == BATCH_SIZE {
-                database.batch_insert_turing_machines(&turing_machines[..]).await;
+                database
+                    .batch_insert_turing_machines(&turing_machines[..])
+                    .await;
                 turing_machines = Vec::new();
             }
         }

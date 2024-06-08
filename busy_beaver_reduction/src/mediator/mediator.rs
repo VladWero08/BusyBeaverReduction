@@ -17,7 +17,7 @@ const BATCH_SIZE: usize = 1000;
 pub struct Mediator {
     number_of_states: u8,
     turing_machines: Vec<TuringMachine>,
-    loaded: bool
+    loaded: bool,
 }
 
 impl Mediator {
@@ -71,7 +71,9 @@ impl Mediator {
         self.loaded = false;
     }
 
-    pub fn get_loaded(&self) -> bool { return self.loaded; }
+    pub fn get_loaded(&self) -> bool {
+        return self.loaded;
+    }
 
     /// Checks if the generation already took place, aka
     /// there are turing machines with the desired number of states
@@ -92,6 +94,9 @@ impl Mediator {
             Receiver<Vec<TransitionFunction>>,
         ) = channel();
 
+        // create a copy of number of states
+        let number_of_states = self.number_of_states;
+
         // mpsc channel used for sending filtered transition function
         // from the filter to the generator
         let (tx_filtered_functions, rx_filtered_functions): (
@@ -101,13 +106,11 @@ impl Mediator {
 
         // creates a new thread for the filter
         let filter_handle = thread::spawn(move || {
-            let mut filter = Filter::new(tx_filtered_functions, rx_unfiltered_functions);
+            let mut filter = Filter::new(tx_filtered_functions, rx_unfiltered_functions, number_of_states);
 
             filter.receive_all_unfiltered();
         });
 
-        // create a copy of number of states
-        let number_of_states = self.number_of_states;
         // creates a new thread for the generator
         let generator_handle = thread::spawn(move || {
             let mut generator = Generator::new(
@@ -161,7 +164,9 @@ impl Mediator {
         // creates a new thread for the database insertions
         database_handler = tokio::spawn(async {
             let mut database_manager_runner = DatabaseManagerRunner::new(rx_turing_machine);
-            database_manager_runner.receive_and_update_turing_machines().await;
+            database_manager_runner
+                .receive_and_update_turing_machines()
+                .await;
         });
 
         // creates a new thread to run turing machines
@@ -194,7 +199,9 @@ impl Mediator {
         // creates a new thread for the database insertions
         database_handler = tokio::spawn(async {
             let mut database_manager_runner = DatabaseManagerRunner::new(rx_turing_machine);
-            database_manager_runner.receive_and_insert_turing_machines().await;
+            database_manager_runner
+                .receive_and_insert_turing_machines()
+                .await;
         });
 
         // creates a new thread to run turing machines

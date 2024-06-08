@@ -1,6 +1,7 @@
 use crate::delta::transition_function::TransitionFunction;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
+use log::info;
 
 /// Implements filter techniques for `TransitionFunction`s that
 /// have been `partially generated`.
@@ -8,15 +9,86 @@ use crate::turing_machine::special_states::SpecialStates;
 /// This filtering is used during the generation of all
 /// transition functions, to reduce the number of functions
 /// that need to be generated.
-pub struct FilterGenerate {}
+pub struct FilterGenerate {
+    halting_skippers: i64,
+    start_state_loopers: i64,
+    neighbour_state_loopers: i64,
+    naive_beavers: i64,
+    turing_machines_size: i64,
+    maximum_entries: usize,
+    maximum_possibilies_for_entry: usize,
+}
 
 impl FilterGenerate {
+    pub fn new(number_of_states: usize, alphabet_size: usize, directions_size: usize) -> Self {
+        let maximum_entries = number_of_states * alphabet_size;
+
+        // the original number of possibilites for Q' x Gamma x Directions
+        let original_maximum_possibilites_for_entry =
+            alphabet_size * directions_size * (number_of_states + 1);
+
+        // represents the possibilities of Q' x Gamma x Directions,
+        // in the current representation being reduced by the halting skippers
+        let maximum_possibilies_for_entry = number_of_states * alphabet_size * directions_size + 1;
+
+        let original_turing_machines_size =
+            (original_maximum_possibilites_for_entry).pow(maximum_entries as u32);
+        let filtered_turing_machines_size =
+            (maximum_possibilies_for_entry).pow(maximum_entries as u32);
+
+        // compute how many Turing machines were filtered using
+        // the halting skippers filter technique
+        let halting_skippers = original_turing_machines_size - filtered_turing_machines_size;
+
+        return FilterGenerate {
+            halting_skippers: halting_skippers as i64,
+            start_state_loopers: 0,
+            neighbour_state_loopers: 0,
+            naive_beavers: 0,
+            turing_machines_size: original_turing_machines_size as i64,
+            maximum_entries,
+            maximum_possibilies_for_entry,
+        };
+    }
+
+    /// Given a transition function, calculates how many
+    /// transition functions were filtered by stopping generating
+    /// from its state onward.
+    ///
+    /// The computation is done based on the number of
+    /// entries left to complete in the transition function.
+    pub fn get_transition_function_filtered(
+        &self,
+        transition_function: &TransitionFunction,
+    ) -> i64 {
+        let entries_left_to_complete = self.maximum_entries - transition_function.transitions.len();
+        let transition_functions_filtered = self
+            .maximum_possibilies_for_entry
+            .pow(entries_left_to_complete as u32);
+
+        return transition_functions_filtered as i64;
+    }
+
     /// Applies all filters of the `FilterGenerate` struct to the provided
     /// `TransitionFunction` and returns true if they were `all` passed.
-    pub fn filter_all(transition_function: &TransitionFunction) -> bool {
-        return Self::filter_start_state_moves_into_loop(transition_function)
-            && Self::filter_moves_into_neighbour_loop(transition_function)
-            && Self::filter_moves_to_halting_state(transition_function);
+    pub fn filter_all(&mut self, transition_function: &TransitionFunction) -> bool {
+        if Self::filter_start_state_moves_into_loop(transition_function) == false {
+            self.start_state_loopers += self.get_transition_function_filtered(transition_function);
+            return false;
+        }
+
+        if Self::filter_moves_into_neighbour_loop(transition_function) == false {
+            self.neighbour_state_loopers +=
+                self.get_transition_function_filtered(transition_function);
+            return false;
+        }
+
+        if Self::filter_moves_to_halting_state(transition_function) == false {
+            self.naive_beavers += self.get_transition_function_filtered(transition_function);
+            return false;
+        }
+
+        return true;
     }
 
     /// Checks whether the start state of the transition function
@@ -99,6 +171,28 @@ impl FilterGenerate {
                 return true;
             }
         }
+    }
+
+    /// Display the number of Turing machines that was filtered
+    /// by each individual filter.
+    pub fn display_filtering_results(&self) {
+        info!(
+            "Filtered a total of halting skippers: {}",
+            self.halting_skippers
+        );
+
+        info!(
+            "Filtered a total of start state loopers: {}",
+            self.start_state_loopers
+        );
+        info!(
+            "Filtered a total of neighbour state loopers: {}",
+            self.neighbour_state_loopers
+        );
+        info!(
+            "Filtered a total of naive beavers: {}",
+            self.naive_beavers
+        );
     }
 }
 

@@ -15,6 +15,7 @@ pub struct GeneratorTransitionFunction {
     pub states: Vec<u8>,
     pub states_final: Vec<u8>,
     pub all_transitions: Vec<Transition>,
+    pub filter_generate: FilterGenerate,
 }
 
 impl GeneratorTransitionFunction {
@@ -42,6 +43,11 @@ impl GeneratorTransitionFunction {
             states: states,
             states_final: states_final,
             all_transitions: vec![],
+            filter_generate: FilterGenerate::new(
+                number_of_states as usize,
+                ALPHABET.len(),
+                DIRECTIONS.len(),
+            ),
         };
     }
 
@@ -191,6 +197,8 @@ impl GeneratorTransitionFunction {
             "Generated a total of {} transition functions.",
             maximum_number_of_transition_functions
         );
+
+        self.filter_generate.display_filtering_results();
     }
 
     /// Generates all possible combinations of the transitions.
@@ -242,7 +250,7 @@ impl GeneratorTransitionFunction {
 
                 // check if the transition function passes the
                 // generation filters
-                if FilterGenerate::filter_all(transition_function) == true {
+                if self.filter_generate.filter_all(transition_function) == true {
                     // recursive call to continue on adding
                     // new transitions to the combintation
                     self.generate_all_transition_combinations(

@@ -5,18 +5,30 @@ use regex::Regex;
 
 use crate::delta::transition_function::TransitionFunction;
 use crate::turing_machine::special_states::SpecialStates;
+use log::info;
 
 /// Implements filter techniques for `TransitionFunction`s that
 /// have been `fully generated`, a.k.a their domain of definition
 /// is fully completed.
 pub struct FilterCompile {
     pub turing_machines_templates: Vec<Vec<(Regex, u8, u8)>>,
+    turing_machines_size: i64,
+    never_halters: i64,
+    never_outputers: i64,
 }
 
 impl FilterCompile {
-    pub fn new() -> Self {
+    pub fn new(number_of_states: usize, alphabet_size: usize, directions_size: usize) -> Self {
+        let maximum_possibilites_for_entry =
+            alphabet_size * directions_size * (number_of_states + 1);
+        let maximum_entries = number_of_states * alphabet_size;
+        let turing_machines_size = maximum_possibilites_for_entry.pow(maximum_entries as u32);
+
         return FilterCompile {
             turing_machines_templates: Vec::new(),
+            turing_machines_size: turing_machines_size as i64,
+            never_halters: 0,
+            never_outputers: 0,
         };
     }
 
@@ -30,7 +42,7 @@ impl FilterCompile {
         tx: Sender<Vec<TransitionFunction>>,
     ) {
         transition_functions
-            .retain(|transition_function| Self::filter_all(transition_function) == true);
+            .retain(|transition_function| self.filter_all(transition_function) == true);
 
         // transition_functions = self.filter_existing_templates(transition_functions);
 
@@ -41,9 +53,18 @@ impl FilterCompile {
 
     /// Applies all filters of the `FilterCompile` struct to the provided
     /// `TransitionFunction` and returns true if they were `all` passed.
-    pub fn filter_all(transition_function: &TransitionFunction) -> bool {
-        return Self::filter_no_moves_to_halting_state(transition_function)
-            && Self::filter_no_symbol_writing(transition_function);
+    pub fn filter_all(&mut self, transition_function: &TransitionFunction) -> bool {
+        if Self::filter_no_symbol_writing(transition_function) == false {
+            self.never_outputers += 1;
+            return false;
+        }
+
+        if Self::filter_no_moves_to_halting_state(transition_function) == false {
+            self.never_halters += 1;
+            return false;
+        }
+
+        return true;
     }
 
     /// Check if there is at least one transition that will
@@ -216,6 +237,20 @@ impl FilterCompile {
 
         return template;
     }
+
+    /// Display the number of Turing machines that was filtered
+    /// by each individual filter.
+    pub fn display_filtering_results(&self) {
+        info!(
+            "Filtered a total of never halters: {}",
+            self.never_halters 
+        );
+
+        info!(
+            "Filtered a total of never outputers: {}",
+            self.never_outputers 
+        );
+    }
 }
 
 #[cfg(test)]
@@ -308,7 +343,7 @@ mod tests {
             transition_function_03.clone(),
             transition_function_04.clone(),
         ];
-        let mut filter_compile = FilterCompile::new();
+        let mut filter_compile = FilterCompile::new(3, 3, 2);
         let transition_functions_filtered =
             filter_compile.filter_existing_templates(transition_functions);
 
