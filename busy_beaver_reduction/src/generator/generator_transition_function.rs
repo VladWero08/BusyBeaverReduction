@@ -1,3 +1,4 @@
+use std::collections::VecDeque;
 use std::sync::mpsc::Sender;
 
 use log::info;
@@ -174,14 +175,12 @@ impl GeneratorTransitionFunction {
 
         // generate all possible functions by combining
         // every possible function
-        self.generate_all_transition_combinations(
-            index,
-            transition_function,
+
+        self.generate_all_transition_combiation_queue(
             transition_functions_set,
-            &tx_unfiltered_functions,
-            deepness,
             maximum_number_of_transitions,
-            batch_size,
+            &tx_unfiltered_functions,
+            batch_size
         );
 
         // if the maximum number of transition combinations
@@ -269,5 +268,67 @@ impl GeneratorTransitionFunction {
                 transition_function.transitions.remove(transition_key);
             }
         }
+    }
+
+    pub fn generate_all_transition_combiation_queue(
+        &mut self,
+        transition_functions_set: &mut Vec<TransitionFunction>,
+        maximum_number_of_transitions: usize,
+        tx_unfiltered_functions: &Sender<Vec<TransitionFunction>>,
+        batch_size: usize,
+    ) {
+        let maximum_possibilites_for_entry = self.states.len() * ALPHABET.len() * DIRECTIONS.len() + 1;
+        let mut queue: VecDeque<TransitionFunction> = VecDeque::new();
+
+        // initialise the queue with transition function that separately
+        // contain all the transitions of the form (0, 0) ->
+        for index in 0..maximum_possibilites_for_entry {
+            let mut transition_function: TransitionFunction = TransitionFunction::new(self.states.len() as u8, ALPHABET.len() as u8);
+            transition_function.add_transition(self.all_transitions[index]);
+            queue.push_back(transition_function);
+        }
+
+        while queue.len() != 0 {
+            // extract the oldest transition function in the queue
+            let mut transition_function = queue.pop_front().unwrap();
+            let transition_function_length = transition_function.transitions.len();
+
+            // if the transition function reached the desired number of transitions,
+            // add it to the set of transition functions; 
+            if transition_function_length == maximum_number_of_transitions {
+                transition_functions_set.push(transition_function);
+
+                // if the transition function set reached the batch size,
+                // send the unfiltered transitions to the filter
+                if transition_functions_set.len() == batch_size {
+                    tx_unfiltered_functions.send(transition_functions_set.clone()).unwrap();
+                    transition_functions_set.clear();
+                }
+            } else {
+                // because the transition were generated sequentally, the first ones
+                // target (q_{0}, 0), than (q_{0}, 1), and so on... iterate through the
+                // next transition that need to be added and check their validty
+                for index in maximum_possibilites_for_entry * transition_function_length..maximum_possibilites_for_entry * (transition_function_length + 1) {
+                    let transition_key: &(u8, u8) = &(
+                        self.all_transitions[index].from_state,
+                        self.all_transitions[index].from_symbol,
+                    );
+                               
+
+                    if !transition_function.transitions.contains_key(transition_key) {
+                        transition_function.add_transition(self.all_transitions[index]);
+                        
+                        // check if the transition function passes the
+                        // generation filters
+                        if self.filter_generate.filter_all(&transition_function) == true {
+                            queue.push_back(transition_function.clone());
+                        }
+
+                        transition_function.transitions.remove(transition_key);
+                    }
+                }
+            }
+        }
+
     }
 }

@@ -241,14 +241,11 @@ impl FilterCompile {
     /// Display the number of Turing machines that was filtered
     /// by each individual filter.
     pub fn display_filtering_results(&self) {
-        info!(
-            "Filtered a total of never halters: {}",
-            self.never_halters 
-        );
+        info!("Filtered a total of never halters: {}", self.never_halters);
 
         info!(
             "Filtered a total of never outputers: {}",
-            self.never_outputers 
+            self.never_outputers
         );
     }
 }

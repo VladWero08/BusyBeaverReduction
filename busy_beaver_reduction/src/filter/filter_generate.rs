@@ -189,10 +189,7 @@ impl FilterGenerate {
             "Filtered a total of neighbour state loopers: {}",
             self.neighbour_state_loopers
         );
-        info!(
-            "Filtered a total of naive beavers: {}",
-            self.naive_beavers
-        );
+        info!("Filtered a total of naive beavers: {}", self.naive_beavers);
     }
 }
 

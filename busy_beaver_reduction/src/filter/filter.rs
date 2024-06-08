@@ -25,8 +25,8 @@ impl Filter {
             filter_compile: FilterCompile::new(
                 number_of_states as usize,
                 ALPHABET.len(),
-                DIRECTIONS.len()
-            )
+                DIRECTIONS.len(),
+            ),
         }
     }
 

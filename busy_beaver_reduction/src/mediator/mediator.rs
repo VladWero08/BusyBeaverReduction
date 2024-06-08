@@ -106,7 +106,11 @@ impl Mediator {
 
         // creates a new thread for the filter
         let filter_handle = thread::spawn(move || {
-            let mut filter = Filter::new(tx_filtered_functions, rx_unfiltered_functions, number_of_states);
+            let mut filter = Filter::new(
+                tx_filtered_functions,
+                rx_unfiltered_functions,
+                number_of_states,
+            );
 
             filter.receive_all_unfiltered();
         });
