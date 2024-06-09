@@ -78,7 +78,8 @@ impl Generator {
             );
 
         let filtered_total = maximum_no_of_transition_functions - self.transition_functions.len();
-        let filtered_percentage = filtered_total as f64 * 100.0 / maximum_no_of_transition_functions as f64;
+        let filtered_percentage =
+            filtered_total as f64 * 100.0 / maximum_no_of_transition_functions as f64;
 
         info!(
             "Filtered {:.2}% of the turing machines. ({} / {})",

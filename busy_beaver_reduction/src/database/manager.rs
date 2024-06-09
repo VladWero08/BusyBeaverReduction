@@ -90,9 +90,6 @@ impl DatabaseManager {
         // reconstruct the turing machine
         let mut turing_machine = TuringMachine::new(transition_function);
         turing_machine.halted = row.get(4);
-        turing_machine.steps = row.get(5);
-        turing_machine.score = row.get(6);
-        turing_machine.runtime = row.get(7);
 
         return turing_machine;
     }

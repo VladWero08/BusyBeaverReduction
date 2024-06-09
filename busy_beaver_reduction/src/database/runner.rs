@@ -60,8 +60,8 @@ impl DatabaseManagerRunner {
         // insert the remaining Turing machines
         if turing_machines.len() != 0 {
             database
-            .batch_insert_turing_machines(&turing_machines[..])
-            .await;
+                .batch_insert_turing_machines(&turing_machines[..])
+                .await;
         }
     }
 }

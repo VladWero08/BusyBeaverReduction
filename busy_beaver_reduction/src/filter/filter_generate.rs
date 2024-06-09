@@ -176,6 +176,20 @@ impl FilterGenerate {
     /// Display the number of Turing machines that was filtered
     /// by each individual filter.
     pub fn display_filtering_results(&self) {
+        let halting_skippers_percentage =
+            self.halting_skippers as f64 * 100.0 / self.turing_machines_size as f64;
+        let start_state_loopers_percentage =
+            self.start_state_loopers as f64 * 100.0 / self.turing_machines_size as f64;
+        let neighbour_state_loopers_percentage =
+            self.neighbour_state_loopers as f64 * 100.0 / self.turing_machines_size as f64;
+        let naive_beavers_percentage =
+            self.naive_beavers as f64 * 100.0 / self.turing_machines_size as f64;
+
+        let total = halting_skippers_percentage
+            + start_state_loopers_percentage
+            + neighbour_state_loopers_percentage
+            + naive_beavers_percentage;
+
         info!(
             "Filtered a total of halting skippers: {:.2}%",
             self.halting_skippers as f64 * 100.0 / self.turing_machines_size as f64
@@ -192,8 +206,13 @@ impl FilterGenerate {
         );
 
         info!(
-            "Filtered a total of naive beavers: {:.2}%", 
+            "Filtered a total of naive beavers: {:.2}%",
             self.naive_beavers as f64 * 100.0 / self.turing_machines_size as f64
+        );
+
+        info!(
+            "Filtered a total of {:.2}% Turing machines with generation filters.",
+            total
         );
     }
 }

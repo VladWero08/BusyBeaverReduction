@@ -17,7 +17,7 @@ const BATCH_SIZE: usize = 1000;
 pub struct Mediator {
     number_of_states: u8,
     turing_machines: Vec<TuringMachine>,
-    loaded: bool,
+    pub loaded: bool,
 }
 
 impl Mediator {
@@ -58,21 +58,14 @@ impl Mediator {
                         // so save the turing machines directly
                         if turing_machines.len() > 0 {
                             self.turing_machines = turing_machines;
+                            self.loaded = true;
                         }
-
-                        self.loaded = self.turing_machines.len() > 0;
                     }
                     None => {}
                 }
             }
             None => {}
         }
-
-        self.loaded = false;
-    }
-
-    pub fn get_loaded(&self) -> bool {
-        return self.loaded;
     }
 
     /// Checks if the generation already took place, aka

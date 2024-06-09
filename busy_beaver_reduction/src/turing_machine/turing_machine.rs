@@ -4,10 +4,11 @@ use std::time::{Duration, Instant};
 
 use crate::delta::transition_function::TransitionFunction;
 use crate::filter::filter_runtime::FilterRuntime;
+use crate::filter::filter_runtime::FilterRuntimeType;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
-const MAX_STEPS_TO_RUN: i64 = 21;
+const MAX_STEPS_TO_RUN: i64 = 6;
 
 #[derive(Clone)]
 pub struct TuringMachine {
@@ -20,6 +21,7 @@ pub struct TuringMachine {
     pub steps: i64,
     pub score: i32,
     pub runtime: i64,
+    pub filtered: FilterRuntimeType,
 }
 
 impl TuringMachine {
@@ -34,6 +36,7 @@ impl TuringMachine {
             steps: 0,
             score: 0,
             runtime: 0,
+            filtered: FilterRuntimeType::None,
         }
     }
 
@@ -66,11 +69,18 @@ impl TuringMachine {
         self.make_transition();
 
         while self.halted != true && self.steps <= MAX_STEPS_TO_RUN {
-            let filter_result: bool = filter_runtime.filter_all(&self);
+            let filter_result: FilterRuntimeType = filter_runtime.filter_all(&self);
 
-            if filter_result == false {
-                break;
-            }
+            match filter_result {
+                FilterRuntimeType::ShortEscapee
+                | FilterRuntimeType::LongEscapee
+                | FilterRuntimeType::Cycler
+                | FilterRuntimeType::TranslatedCycler => {
+                    self.filtered = filter_result;
+                    break;
+                }
+                FilterRuntimeType::None => {}
+            };
 
             self.make_transition();
         }

@@ -241,14 +241,26 @@ impl FilterCompile {
     /// Display the number of Turing machines that was filtered
     /// by each individual filter.
     pub fn display_filtering_results(&self) {
+        let never_halters_percentage =
+            self.never_halters as f64 * 100.0 / self.turing_machines_size as f64;
+        let never_outpuers_percentage =
+            self.never_outputers as f64 * 100.0 / self.turing_machines_size as f64;
+
+        let total = never_halters_percentage + never_outpuers_percentage;
+
         info!(
             "Filtered a total of never halters: {:.2}%",
-            self.never_halters as f64 * 100.0 / self.turing_machines_size as f64
+            never_halters_percentage
         );
 
         info!(
             "Filtered a total of never outputers: {:.2}%",
-            self.never_outputers as f64 * 100.0 / self.turing_machines_size as f64
+            never_outpuers_percentage
+        );
+
+        info!(
+            "Filtered a total of {:.2}% Turing machines with compile filters.",
+            total
         );
     }
 }

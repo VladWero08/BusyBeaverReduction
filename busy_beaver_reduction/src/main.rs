@@ -19,9 +19,8 @@ async fn main() {
     let mut bb_mediator = Mediator::new(3);
     bb_mediator.load_turing_machines().await;
 
-    match bb_mediator.get_loaded() {
+    match bb_mediator.loaded {
         true => {
-            bb_mediator.generate_and_filter().await;
             bb_mediator.run_and_update().await;
         }
         false => {
