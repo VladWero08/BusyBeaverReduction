@@ -8,7 +8,7 @@ use crate::filter::filter_runtime::FilterRuntimeType;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
-const MAX_STEPS_TO_RUN: i64 = 6;
+const MAX_STEPS_TO_RUN: i64 = 21;
 
 #[derive(Clone)]
 pub struct TuringMachine {
@@ -68,7 +68,7 @@ impl TuringMachine {
 
         self.make_transition();
 
-        while self.halted != true && self.steps <= MAX_STEPS_TO_RUN {
+        while self.halted != true && self.steps < MAX_STEPS_TO_RUN {
             let filter_result: FilterRuntimeType = filter_runtime.filter_all(&self);
 
             match filter_result {
