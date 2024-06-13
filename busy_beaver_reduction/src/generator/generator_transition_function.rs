@@ -4,13 +4,14 @@ use std::sync::mpsc::Sender;
 use log::info;
 
 use crate::delta::transition::Transition;
-use crate::delta::transition_function::TransitionFunction;
+use crate::delta::transition_function::{self, TransitionFunction};
 use crate::filter::filter_generate::FilterGenerate;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
 const DIRECTIONS: [Direction; 2] = [Direction::LEFT, Direction::RIGHT];
 const ALPHABET: [u8; 2] = [0, 1];
+const GENERATION_ALGORITHM: &str = "DEQUE";
 
 pub struct GeneratorTransitionFunction {
     pub states: Vec<u8>,
@@ -67,6 +68,20 @@ impl GeneratorTransitionFunction {
             (number_of_states + 1) as usize * ALPHABET.len() as usize * DIRECTIONS.len() as usize;
 
         return usize::pow(codomain_size, domain_size);
+    }
+
+    /// Given a `Vec<usize>` that contains indexes of the transitions from `self.all_transitions`
+    /// used for making a transition function, build the `TransitionFunction` object and filter it
+    /// using the `GenerateFilter`.
+    pub fn generate_filter_by_vec(&mut self, indexes: &Vec<u8>) -> bool {
+        let mut transition_function =
+            TransitionFunction::new(self.states.len() as u8, ALPHABET.len() as u8);
+
+        for index in indexes {
+            transition_function.add_transition(self.all_transitions[*index as usize]);
+        }
+
+        self.filter_generate.filter_all(&transition_function)
     }
 
     /// Generates every transition that is possible
@@ -159,13 +174,6 @@ impl GeneratorTransitionFunction {
                 self.states.len() as u8
             );
 
-        // where all transition functions will be computed
-        let transition_function: &mut TransitionFunction =
-            &mut TransitionFunction::new(self.states.len() as u8, ALPHABET.len() as u8);
-        let transition_functions_set: &mut Vec<TransitionFunction> = &mut Vec::new();
-        let index: usize = 0;
-        let deepness: usize = 0;
-
         // if transitions were not generated, generate them
         if self.all_transitions.is_empty() {
             self.generate_all_transitions();
@@ -173,23 +181,52 @@ impl GeneratorTransitionFunction {
 
         info!("Generating all possible transition functions.");
 
-        // generate all possible functions by combining
-        // every possible function
+        match GENERATION_ALGORITHM {
+            "DEQUE" => {
+                // generate all possible functions by combining
+                // every possible function using a deque with TransitionFunctions
+                self.generate_all_transition_combiation_dequeue(
+                    maximum_number_of_transitions,
+                    &tx_unfiltered_functions,
+                    batch_size,
+                );
+            }
+            "DEQUE_VEC" => {
+                // generate all possible functions by combining
+                // every possible function using a deque with Vec<u8> transition indexes
+                self.generate_all_transition_combiation_dequeue_with_vec(
+                    maximum_number_of_transitions as u8,
+                    &tx_unfiltered_functions,
+                    batch_size,
+                );
+            }
+            _ => {
+                // where all transition functions will be computed
+                let transition_function: &mut TransitionFunction =
+                    &mut TransitionFunction::new(self.states.len() as u8, ALPHABET.len() as u8);
+                let transition_functions_set: &mut Vec<TransitionFunction> = &mut Vec::new();
+                let index: usize = 0;
+                let deepness: usize = 0;
 
-        self.generate_all_transition_combiation_queue(
-            transition_functions_set,
-            maximum_number_of_transitions,
-            &tx_unfiltered_functions,
-            batch_size,
-        );
+                self.generate_all_transition_combinations(
+                    index,
+                    transition_function,
+                    transition_functions_set,
+                    &tx_unfiltered_functions.clone(),
+                    deepness,
+                    maximum_number_of_transition_functions,
+                    batch_size,
+                );
 
-        // if the maximum number of transition combinations
-        // will not be dividable by the batch size, also send
-        // the last batch if it is not empty
-        if transition_functions_set.len() != 0 {
-            tx_unfiltered_functions
-                .send(transition_functions_set.clone())
-                .unwrap();
+                // if the maximum number of transition combinations
+                // will not be dividable by the batch size, also send
+                // the last batch if it is not empty
+                if transition_functions_set.len() != 0 {
+                    tx_unfiltered_functions
+                        .send(transition_functions_set.clone())
+                        .unwrap();
+                }
+            }
         }
 
         info!(
@@ -270,13 +307,18 @@ impl GeneratorTransitionFunction {
         }
     }
 
-    pub fn generate_all_transition_combiation_queue(
+    /// Generates all possible combinations of transition
+    /// with a queue, instead of making use of recursion.
+    ///
+    /// This method allows better control of the order in
+    /// which the transition functions will be generated.
+    pub fn generate_all_transition_combiation_dequeue(
         &mut self,
-        transition_functions_set: &mut Vec<TransitionFunction>,
         maximum_number_of_transitions: usize,
         tx_unfiltered_functions: &Sender<Vec<TransitionFunction>>,
         batch_size: usize,
     ) {
+        let mut transition_functions_set: Vec<TransitionFunction> = Vec::new();
         let maximum_possibilites_for_entry =
             self.states.len() * ALPHABET.len() * DIRECTIONS.len() + 1;
         let mut queue: VecDeque<TransitionFunction> = VecDeque::new();
@@ -287,13 +329,24 @@ impl GeneratorTransitionFunction {
             let mut transition_function: TransitionFunction =
                 TransitionFunction::new(self.states.len() as u8, ALPHABET.len() as u8);
             transition_function.add_transition(self.all_transitions[index]);
-            queue.push_back(transition_function);
+
+            if self.filter_generate.filter_all(&transition_function) == true {
+                queue.push_back(transition_function);
+            }
         }
+
+        let mut deepness = 1;
 
         while queue.len() != 0 {
             // extract the oldest transition function in the queue
             let mut transition_function = queue.pop_front().unwrap();
             let transition_function_length = transition_function.transitions.len();
+
+            if transition_function_length > deepness {
+                info!("Reached deepnes {}", transition_function_length);
+                info!("Generation queue size: {}", queue.len());
+                deepness += 1;
+            }
 
             // if the transition function reached the desired number of transitions,
             // add it to the set of transition functions;
@@ -304,9 +357,9 @@ impl GeneratorTransitionFunction {
                 // send the unfiltered transitions to the filter
                 if transition_functions_set.len() == batch_size {
                     tx_unfiltered_functions
-                        .send(transition_functions_set.clone())
+                        .send(transition_functions_set)
                         .unwrap();
-                    transition_functions_set.clear();
+                    transition_functions_set = Vec::new();
                 }
             } else {
                 // because the transition were generated sequentally, the first ones
@@ -332,6 +385,101 @@ impl GeneratorTransitionFunction {
                         transition_function.transitions.remove(transition_key);
                     }
                 }
+            }
+
+            if queue.len() < queue.capacity() / 2 {
+                queue.shrink_to_fit();
+            }
+        }
+    }
+
+    /// Generates all possible combinations of transition
+    /// with a dequeue, instead of making use of recursion.
+    ///
+    /// This method allows better control of the order in
+    /// which the transition functions will be generated.
+    ///
+    /// In addition to the original method of generation with deque,
+    /// instead of keeping all `TransitionFunction`s in the deque,
+    /// only the indexes of `self.all_transitions` for a transition function
+    /// are kept in a `Vec`, which is added in deque.
+    ///
+    /// To filter the `Vec` of transition indexes, a `TransitionFunction`
+    /// object is built before the filtering is done.
+    pub fn generate_all_transition_combiation_dequeue_with_vec(
+        &mut self,
+        maximum_number_of_transitions: u8,
+        tx_unfiltered_functions: &Sender<Vec<TransitionFunction>>,
+        batch_size: usize,
+    ) {
+        let mut transition_functions_set: Vec<TransitionFunction> = Vec::new();
+        let maximum_possibilites_for_entry =
+            (self.states.len() * ALPHABET.len() * DIRECTIONS.len() + 1) as u8;
+        let mut queue: VecDeque<Vec<u8>> = VecDeque::new();
+
+        // initialise the queue with transition function that separately
+        // contain all the transitions of the form (0, 0) ->
+        for index in 0u8..maximum_possibilites_for_entry {
+            let transitions_indexes: Vec<u8> = Vec::from([index]);
+
+            if self.generate_filter_by_vec(&transitions_indexes) == true {
+                queue.push_back(transitions_indexes);
+            }
+        }
+
+        let mut deepness = 1;
+
+        while queue.len() != 0 {
+            // extract the oldest transition function in the queue
+            let mut transitions_vec = queue.pop_front().unwrap();
+            let transitions_vec_length = transitions_vec.len() as u8;
+
+            if transitions_vec_length > deepness {
+                info!("Reached deepnes {}", transitions_vec_length);
+                info!("Generation queue size: {}", queue.len());
+                deepness += 1;
+            }
+
+            // because the transition were generated sequentally, the first ones
+            // target (q_{0}, 0), than (q_{0}, 1), and so on... iterate through the
+            // next transition that need to be added and check their validty
+            for index in maximum_possibilites_for_entry * transitions_vec_length
+                ..maximum_possibilites_for_entry * (transitions_vec_length + 1)
+            {
+                transitions_vec.push(index);
+
+                // check if the transition function passes the
+                // generation filters
+                if self.generate_filter_by_vec(&transitions_vec) == true {
+                    if transitions_vec_length + 1 == maximum_number_of_transitions {
+                        let mut transition_function =
+                            TransitionFunction::new(self.states.len() as u8, ALPHABET.len() as u8);
+
+                        for index in transitions_vec.clone() {
+                            transition_function
+                                .add_transition(self.all_transitions[index as usize]);
+                        }
+
+                        transition_functions_set.push(transition_function);
+
+                        // if the transition function set reached the batch size,
+                        // send the unfiltered transitions to the filter
+                        if transition_functions_set.len() == batch_size {
+                            tx_unfiltered_functions
+                                .send(transition_functions_set)
+                                .unwrap();
+                            transition_functions_set = Vec::new();
+                        }
+                    } else {
+                        queue.push_back(transitions_vec.clone());
+                    }
+                }
+
+                transitions_vec.pop();
+            }
+
+            if queue.len() < queue.capacity() / 2 {
+                queue.shrink_to_fit();
             }
         }
     }
