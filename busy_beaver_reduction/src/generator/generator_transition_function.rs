@@ -4,14 +4,14 @@ use std::sync::mpsc::Sender;
 use log::info;
 
 use crate::delta::transition::Transition;
-use crate::delta::transition_function::{self, TransitionFunction};
+use crate::delta::transition_function::TransitionFunction;
 use crate::filter::filter_generate::FilterGenerate;
 use crate::turing_machine::direction::Direction;
 use crate::turing_machine::special_states::SpecialStates;
 
 const DIRECTIONS: [Direction; 2] = [Direction::LEFT, Direction::RIGHT];
 const ALPHABET: [u8; 2] = [0, 1];
-const GENERATION_ALGORITHM: &str = "DEQUE";
+const GENERATION_ALGORITHM: &str = "RECURISVE";
 
 pub struct GeneratorTransitionFunction {
     pub states: Vec<u8>,
@@ -200,7 +200,7 @@ impl GeneratorTransitionFunction {
                     batch_size,
                 );
             }
-            _ => {
+            "RECURSIVE" => {
                 // where all transition functions will be computed
                 let transition_function: &mut TransitionFunction =
                     &mut TransitionFunction::new(self.states.len() as u8, ALPHABET.len() as u8);
@@ -226,7 +226,8 @@ impl GeneratorTransitionFunction {
                         .send(transition_functions_set.clone())
                         .unwrap();
                 }
-            }
+            },
+            _ => {}
         }
 
         info!(
@@ -391,6 +392,14 @@ impl GeneratorTransitionFunction {
                 queue.shrink_to_fit();
             }
         }
+
+        // if any transition function remained unsent, send them 
+        // to the compile filter
+        if transition_functions_set.len() != 0 {
+            tx_unfiltered_functions
+            .send(transition_functions_set)
+            .unwrap();
+        }
     }
 
     /// Generates all possible combinations of transition
@@ -481,6 +490,14 @@ impl GeneratorTransitionFunction {
             if queue.len() < queue.capacity() / 2 {
                 queue.shrink_to_fit();
             }
+        }
+
+        // if any transition function remained unsent, send them 
+        // to the compile filter
+        if transition_functions_set.len() != 0 {
+            tx_unfiltered_functions
+            .send(transition_functions_set)
+            .unwrap();
         }
     }
 }
